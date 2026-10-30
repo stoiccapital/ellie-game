@@ -52,7 +52,7 @@ export function Career() {
             {/* Track picker */}
             <div className="px-4 pt-3 pb-2 border-b border-line/60">
               <div className="text-[10px] uppercase tracking-wider text-muted mb-2">Corporation</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {CAREER_TRACKS.map((t) => {
                   const active = t.id === careerTrackId;
                   return (

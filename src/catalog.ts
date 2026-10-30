@@ -661,6 +661,21 @@ export const CAREER_TRACKS: CareerTrack[] = [
     ],
   },
   {
+    id: 'sales',
+    name: 'Tech Sales',
+    company: 'Nimbus Software',
+    tagline: 'Enterprise SaaS sales. Base + commission; high ceiling, quota pressure.',
+    color: '#c88a4a',
+    levels: [
+      { title: 'SDR',               salary:  5_800, upgradeCost:      0, tenureRequired:  0 },
+      { title: 'Account Executive', salary: 12_500, upgradeCost: 10_000, tenureRequired: 12 },
+      { title: 'Senior AE',         salary: 18_000, upgradeCost: 25_000, tenureRequired: 18 },
+      { title: 'Enterprise AE',     salary: 27_000, upgradeCost: 70_000, tenureRequired: 24 },
+      { title: 'Sales Director',    salary: 37_500, upgradeCost: 180_000, tenureRequired: 36 },
+      { title: 'VP Sales',          salary: 54_000, upgradeCost: 420_000, tenureRequired: 48 },
+    ],
+  },
+  {
     id: 'consulting',
     name: 'Consulting',
     company: 'Northstar Advisory',
