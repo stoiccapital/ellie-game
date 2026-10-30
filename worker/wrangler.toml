@@ -1,0 +1,10 @@
+name = "ellie-money-house-saves"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+
+# Create the KV namespace once with:
+#   wrangler kv namespace create SAVES
+# Then paste the returned id below.
+[[kv_namespaces]]
+binding = "SAVES"
+id = "dd2e42d6ceb648f2be63c4614407aa57"
