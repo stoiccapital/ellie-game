@@ -534,9 +534,9 @@ export const CATALOG: AssetDef[] = [
     monthlyExpense: 6_500,
     appreciationYearly: 0.02,
     depreciationYearly: 0,
-    description: 'Vertical SaaS with recurring revenue.',
+    description: 'Vertical SaaS with recurring revenue. Portfolio can scale indefinitely.',
     color: '#5a8a52',
-    maxOwned: 3,
+    // No cap — a SaaS portfolio operator / holdco can accumulate thousands.
   },
 ];
 
