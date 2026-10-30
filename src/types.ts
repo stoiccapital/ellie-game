@@ -1,4 +1,4 @@
-export type AssetCategory = 'real_estate' | 'land' | 'vehicle' | 'commercial' | 'tower';
+export type AssetCategory = 'real_estate' | 'land' | 'vehicle' | 'commercial' | 'tower' | 'etf' | 'business';
 
 export interface AssetDef {
   id: string;
@@ -17,6 +17,8 @@ export interface AssetDef {
   // Supported values: 'shop' | 'supermarket' | 'office' | 'hotel' | 'school' | 'clinic'
   //                 | 'hospital' | 'gym' | 'cinema'.
   sprite?: string;
+  // Monthly price volatility (fraction, e.g., 0.04 = ±4% noise). Only used for ETFs.
+  volatility?: number;
 }
 
 export interface OwnedAsset {

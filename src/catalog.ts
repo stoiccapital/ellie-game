@@ -387,6 +387,149 @@ export const CATALOG: AssetDef[] = [
     description: 'Rideshare / rental fleet.',
     color: '#4a6fa5',
   },
+  // ──────────────────────────────────────────────────────────────────────────
+  // ETFs — passive portfolio holdings. Price drifts with trend + volatility.
+  // appreciationYearly captures long-term expected return; volatility is monthly noise.
+  // monthlyIncome encodes dividend yield at purchase price (treated as scalar for simplicity).
+  {
+    id: 'etf_bond',
+    name: 'Bond Index ETF',
+    category: 'etf',
+    price: 1_000,
+    monthlyIncome: 3,
+    monthlyExpense: 0,
+    appreciationYearly: 0.015,
+    depreciationYearly: 0,
+    volatility: 0.008,
+    description: 'Investment-grade bonds. Low volatility, modest yield.',
+    color: '#6b8aa3',
+  },
+  {
+    id: 'etf_sp500',
+    name: 'S&P 500 ETF',
+    category: 'etf',
+    price: 1_000,
+    monthlyIncome: 1.5,
+    monthlyExpense: 0,
+    appreciationYearly: 0.08,
+    depreciationYearly: 0,
+    volatility: 0.04,
+    description: 'Large-cap US equities. Core diversified holding.',
+    color: '#4e8a7e',
+  },
+  {
+    id: 'etf_world',
+    name: 'MSCI World ETF',
+    category: 'etf',
+    price: 1_000,
+    monthlyIncome: 1.5,
+    monthlyExpense: 0,
+    appreciationYearly: 0.07,
+    depreciationYearly: 0,
+    volatility: 0.035,
+    description: 'Global developed-market equities.',
+    color: '#5a7a9c',
+  },
+  {
+    id: 'etf_tech',
+    name: 'Tech Sector ETF',
+    category: 'etf',
+    price: 1_000,
+    monthlyIncome: 0.8,
+    monthlyExpense: 0,
+    appreciationYearly: 0.11,
+    depreciationYearly: 0,
+    volatility: 0.065,
+    description: 'Concentrated tech bet. Higher upside, higher drawdowns.',
+    color: '#8a5c87',
+  },
+  {
+    id: 'etf_emerging',
+    name: 'Emerging Markets ETF',
+    category: 'etf',
+    price: 1_000,
+    monthlyIncome: 2.0,
+    monthlyExpense: 0,
+    appreciationYearly: 0.09,
+    depreciationYearly: 0,
+    volatility: 0.055,
+    description: 'Emerging-market equities. Volatile but higher growth.',
+    color: '#c88a4a',
+  },
+  // ──────────────────────────────────────────────────────────────────────────
+  // Businesses — owner-operated, no plot required. Pay to start, earn monthly.
+  {
+    id: 'biz_freelance',
+    name: 'Freelance Studio',
+    category: 'business',
+    price: 15_000,
+    monthlyIncome: 2_600,
+    monthlyExpense: 400,
+    appreciationYearly: 0,
+    depreciationYearly: 0.05,
+    description: 'Solo consulting or creative services. Low overhead.',
+    color: '#d9b672',
+  },
+  {
+    id: 'biz_online_shop',
+    name: 'E-commerce Shop',
+    category: 'business',
+    price: 25_000,
+    monthlyIncome: 3_200,
+    monthlyExpense: 1_100,
+    appreciationYearly: 0,
+    depreciationYearly: 0.04,
+    description: 'Dropship / small online brand. Scales with ads.',
+    color: '#8ab5c5',
+  },
+  {
+    id: 'biz_food_truck',
+    name: 'Food Truck',
+    category: 'business',
+    price: 48_000,
+    monthlyIncome: 6_500,
+    monthlyExpense: 3_200,
+    appreciationYearly: 0,
+    depreciationYearly: 0.06,
+    description: 'Mobile kitchen. Lunchtime crowds, weekend events.',
+    color: '#c88a4a',
+  },
+  {
+    id: 'biz_delivery',
+    name: 'Delivery Service',
+    category: 'business',
+    price: 120_000,
+    monthlyIncome: 11_000,
+    monthlyExpense: 6_500,
+    appreciationYearly: 0,
+    depreciationYearly: 0.07,
+    description: 'Last-mile courier operation with a small fleet.',
+    color: '#7fa8c7',
+  },
+  {
+    id: 'biz_agency',
+    name: 'Marketing Agency',
+    category: 'business',
+    price: 220_000,
+    monthlyIncome: 22_000,
+    monthlyExpense: 13_500,
+    appreciationYearly: 0,
+    depreciationYearly: 0.03,
+    description: 'Boutique agency. People-heavy but strong margins.',
+    color: '#b48ac1',
+  },
+  {
+    id: 'biz_saas',
+    name: 'SaaS Product',
+    category: 'business',
+    price: 450_000,
+    monthlyIncome: 42_000,
+    monthlyExpense: 18_000,
+    appreciationYearly: 0.02,
+    depreciationYearly: 0,
+    description: 'Vertical SaaS with recurring revenue.',
+    color: '#5a8a52',
+  },
 ];
 
 export interface Neighbor {
@@ -457,7 +600,23 @@ export const BUILDABLE_IDS = [
 ];
 
 export const LIVING_EXPENSE = 1_800;
+// Legacy constant kept for the HUD "Salary" label — JOB_LEVELS[0].salary.
 export const JOB_SALARY = 3_500;
+
+// Career ladder. Pay the training cost to level up and unlock the higher salary.
+export interface JobLevel {
+  title: string;
+  salary: number;
+  upgradeCost: number;
+}
+export const JOB_LEVELS: JobLevel[] = [
+  { title: 'Analyst', salary: 3_500, upgradeCost: 0 },
+  { title: 'Senior Analyst', salary: 5_500, upgradeCost: 8_000 },
+  { title: 'Manager', salary: 8_500, upgradeCost: 25_000 },
+  { title: 'Director', salary: 13_500, upgradeCost: 60_000 },
+  { title: 'VP', salary: 20_000, upgradeCost: 140_000 },
+  { title: 'C-Suite', salary: 32_000, upgradeCost: 300_000 },
+];
 // Monthly rent Ellie pays if she sells her home.
 export const RENT_MONTHLY = 2_000;
 export const STARTING_CAPITAL = 100_000;
@@ -469,5 +628,11 @@ export const HOME_APPRECIATION_YEARLY = 0.03;
 export const BANKRUPTCY_THRESHOLD = -25_000;
 // Bank
 export const MORTGAGE_RATE_YEARLY = 0.065;
+// 30-year amortizing mortgage. The monthly payment factor is the k in
+// payment = debt × k, derived from the standard amortization formula
+// k = r(1+r)^n / ((1+r)^n − 1) with r = monthlyRate(0.065) and n = 360.
+// Payment = interest (debt × r) + principal (debt × (k − r)), so debt
+// gradually declines as long as the loan is being serviced.
+export const MORTGAGE_PAYMENT_FACTOR_MONTHLY = 0.00632;
 // Max loan-to-value against (home + asset) collateral.
 export const MAX_LTV = 0.75;

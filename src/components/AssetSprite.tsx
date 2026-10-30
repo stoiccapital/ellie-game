@@ -35,7 +35,36 @@ export function AssetSprite({ category, color, size = 1, floors, sprite }: Props
       return <VehicleSprite color={color} scale={s} />;
     case 'tower':
       return <TowerSprite color={color} scale={s} floors={floors ?? 10} />;
+    case 'etf':
+      return <EtfSprite color={color} scale={s} />;
+    case 'business':
+      return <CommercialSprite color={color} scale={s} />;
   }
+}
+
+function EtfSprite({ color, scale }: { color: string; scale: number }) {
+  // Mini stacked-bar chart glyph. Centered at (0, 0).
+  const bars = [0.5, 0.75, 0.4, 0.9, 0.6];
+  const bw = 4 * scale;
+  const spacing = 1.5 * scale;
+  const total = bars.length * bw + (bars.length - 1) * spacing;
+  const maxH = 22 * scale;
+  const base = shade(color, -0.15);
+  const top = shade(color, 0.2);
+  return (
+    <g>
+      {bars.map((h, i) => {
+        const x = -total / 2 + i * (bw + spacing);
+        const barH = maxH * h;
+        return (
+          <g key={i}>
+            <rect x={x} y={-barH} width={bw} height={barH} fill={base} />
+            <rect x={x} y={-barH} width={bw} height={barH * 0.25} fill={top} />
+          </g>
+        );
+      })}
+    </g>
+  );
 }
 
 function shade(hex: string, amount: number) {

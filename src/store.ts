@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CATALOG, BANKRUPTCY_THRESHOLD, HOME_APPRECIATION_YEARLY, JOB_SALARY, LIVING_EXPENSE, MAX_LTV, MORTGAGE_RATE_YEARLY, NEIGHBORS, RENT_MONTHLY, STARTING_CAPITAL, STARTING_DEBT, STARTING_HOME_VALUE } from './catalog';
+import { CATALOG, BANKRUPTCY_THRESHOLD, HOME_APPRECIATION_YEARLY, JOB_LEVELS, LIVING_EXPENSE, MAX_LTV, MORTGAGE_PAYMENT_FACTOR_MONTHLY, MORTGAGE_RATE_YEARLY, NEIGHBORS, RENT_MONTHLY, STARTING_CAPITAL, STARTING_DEBT, STARTING_HOME_VALUE } from './catalog';
 import type { OwnedAsset, Speed } from './types';
 
 interface GameState {
@@ -16,20 +16,24 @@ interface GameState {
   // after a sell (neighbor does not move back in).
   clearedPlots: number[];
   debt: number;
+  jobLevel: number;
   homeModalOpen: boolean;
   bankModalOpen: boolean;
+  careerModalOpen: boolean;
 
   tick: () => void;
   setHomeModalOpen: (open: boolean) => void;
   setBankModalOpen: (open: boolean) => void;
+  setCareerModalOpen: (open: boolean) => void;
   setSpeed: (s: Speed) => void;
-  buyAsset: (defId: string) => boolean;
+  buyAsset: (defId: string, dollars?: number) => boolean;
   buyNeighbor: (plotIndex: number) => boolean;
   sellAsset: (instanceId: string) => void;
   redevelopAsset: (instanceId: string, newDefId: string) => boolean;
   borrow: (amount: number) => boolean;
   repay: (amount: number) => boolean;
   sellHome: () => void;
+  upgradeJob: () => boolean;
   reset: () => void;
 }
 
@@ -48,11 +52,14 @@ export const useGame = create<GameState>()(
   peakNetWorth: STARTING_CAPITAL + STARTING_HOME_VALUE - STARTING_DEBT,
   clearedPlots: [],
   debt: STARTING_DEBT,
+  jobLevel: 0,
   homeModalOpen: false,
   bankModalOpen: false,
+  careerModalOpen: false,
 
   setHomeModalOpen: (open) => set({ homeModalOpen: open }),
   setBankModalOpen: (open) => set({ bankModalOpen: open }),
+  setCareerModalOpen: (open) => set({ careerModalOpen: open }),
 
   tick: () => {
     const s = get();
@@ -61,25 +68,40 @@ export const useGame = create<GameState>()(
     let capital = s.capital;
     const newOwned: OwnedAsset[] = s.owned.map((asset) => {
       const def = CATALOG.find((d) => d.id === asset.defId)!;
-      capital += def.monthlyIncome - def.monthlyExpense;
+      // Dividend / cashflow — scaled by currentValue for ETFs so yield tracks holdings,
+      // flat per-unit for everything else.
+      if (def.category === 'etf') {
+        const yieldPerDollar = def.monthlyIncome / def.price;
+        capital += asset.currentValue * yieldPerDollar - def.monthlyExpense;
+      } else {
+        capital += def.monthlyIncome - def.monthlyExpense;
+      }
 
       const appRate = def.appreciationYearly > 0 ? monthlyRate(def.appreciationYearly) : 0;
       const depRate = def.depreciationYearly > 0 ? monthlyRate(-def.depreciationYearly) : 0;
-      const nextValue = asset.currentValue * (1 + appRate + depRate);
+      // Monthly noise for volatile assets (ETFs). Zero-mean, uniform in [-vol, +vol].
+      const noise = def.volatility ? (Math.random() * 2 - 1) * def.volatility : 0;
+      const nextValue = asset.currentValue * (1 + appRate + depRate + noise);
 
-      return { ...asset, currentValue: nextValue };
+      return { ...asset, currentValue: Math.max(0, nextValue) };
     });
 
-    capital += JOB_SALARY - LIVING_EXPENSE;
+    const salary = JOB_LEVELS[Math.min(s.jobLevel, JOB_LEVELS.length - 1)].salary;
+    capital += salary - LIVING_EXPENSE;
 
     // Rent if Ellie has sold her home.
     if (!s.hasHome) {
       capital -= RENT_MONTHLY;
     }
 
-    // Interest-only loan servicing. Debt principal only moves via borrow/repay.
-    if (s.debt > 0) {
-      capital -= s.debt * monthlyRate(MORTGAGE_RATE_YEARLY);
+    // Amortizing mortgage: fixed monthly payment covers interest + principal.
+    // Principal portion is paid down each month, so debt declines over time.
+    let debt = s.debt;
+    if (debt > 0) {
+      const interest = debt * monthlyRate(MORTGAGE_RATE_YEARLY);
+      const payment = Math.min(debt + interest, debt * MORTGAGE_PAYMENT_FACTOR_MONTHLY);
+      capital -= payment;
+      debt = Math.max(0, debt - (payment - interest));
     }
 
     const homeValue = s.hasHome
@@ -87,7 +109,7 @@ export const useGame = create<GameState>()(
       : 0;
 
     const assetValue = newOwned.reduce((a, b) => a + b.currentValue, 0);
-    const netWorth = capital + homeValue + assetValue - s.debt;
+    const netWorth = capital + homeValue + assetValue - debt;
     const peakNetWorth = Math.max(s.peakNetWorth, netWorth);
 
     const bankrupt = capital < BANKRUPTCY_THRESHOLD;
@@ -96,6 +118,7 @@ export const useGame = create<GameState>()(
       capital,
       owned: newOwned,
       homeValue,
+      debt,
       month: s.month + 1,
       gameOver: bankrupt,
       speed: bankrupt ? 0 : s.speed,
@@ -105,25 +128,37 @@ export const useGame = create<GameState>()(
 
   setSpeed: (speed) => set({ speed }),
 
-  buyAsset: (defId) => {
+  buyAsset: (defId, dollars) => {
     const def = CATALOG.find((d) => d.id === defId);
     if (!def) return false;
-    if (def.category !== 'vehicle') return false; // houses come from neighbors
+    // Plot-occupying categories must come via buyNeighbor / redevelop.
+    if (def.category === 'real_estate' || def.category === 'tower' || def.category === 'commercial' || def.category === 'land') {
+      return false;
+    }
     const s = get();
-    if (s.capital < def.price) return false;
-    const plotTakers = s.owned.filter((a) => a.plotIndex !== undefined).length;
-    const vehicles = s.owned.length - plotTakers;
-    const parkingCapacity = 1 + plotTakers;
-    if (vehicles >= parkingCapacity) return false;
+    // Vehicle parking cap: 1 base + 1 per owned plot. Does not apply to ETFs/businesses.
+    if (def.category === 'vehicle') {
+      const plotTakers = s.owned.filter((a) => a.plotIndex !== undefined).length;
+      const vehicles = s.owned.filter((a) => {
+        const d = CATALOG.find((c) => c.id === a.defId);
+        return d?.category === 'vehicle';
+      }).length;
+      if (vehicles >= 1 + plotTakers) return false;
+    }
+
+    // ETFs accept a dollar amount (fractional shares). Everything else is a fixed-price unit.
+    const spend = def.category === 'etf' && dollars !== undefined ? dollars : def.price;
+    if (spend <= 0) return false;
+    if (s.capital < spend) return false;
 
     const owned: OwnedAsset = {
       instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
       defId,
       purchasedMonth: s.month,
-      purchasePrice: def.price,
-      currentValue: def.price,
+      purchasePrice: spend,
+      currentValue: spend,
     };
-    set({ capital: s.capital - def.price, owned: [...s.owned, owned] });
+    set({ capital: s.capital - spend, owned: [...s.owned, owned] });
     return true;
   },
 
@@ -209,6 +244,16 @@ export const useGame = create<GameState>()(
     return true;
   },
 
+  upgradeJob: () => {
+    const s = get();
+    const next = s.jobLevel + 1;
+    if (next >= JOB_LEVELS.length) return false;
+    const cost = JOB_LEVELS[next].upgradeCost;
+    if (s.capital < cost) return false;
+    set({ capital: s.capital - cost, jobLevel: next });
+    return true;
+  },
+
   sellHome: () => {
     const s = get();
     if (!s.hasHome) return;
@@ -234,6 +279,7 @@ export const useGame = create<GameState>()(
       peakNetWorth: STARTING_CAPITAL + STARTING_HOME_VALUE - STARTING_DEBT,
       clearedPlots: [],
       debt: STARTING_DEBT,
+      jobLevel: 0,
     }),
     }),
     {
@@ -251,6 +297,7 @@ export const useGame = create<GameState>()(
         peakNetWorth: s.peakNetWorth,
         clearedPlots: s.clearedPlots,
         debt: s.debt,
+        jobLevel: s.jobLevel,
       }),
     },
   ),

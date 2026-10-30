@@ -7,6 +7,7 @@ import { Portfolio } from './components/Portfolio';
 import { GameOver } from './components/GameOver';
 import { Home } from './components/Home';
 import { Bank } from './components/Bank';
+import { Career } from './components/Career';
 
 export default function App() {
   const speed = useGame((s) => s.speed);
@@ -38,6 +39,7 @@ export default function App() {
       <GameOver />
       <Home />
       <Bank />
+      <Career />
     </div>
   );
 }

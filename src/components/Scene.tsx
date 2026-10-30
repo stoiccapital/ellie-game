@@ -247,11 +247,16 @@ export function Scene() {
 
   // Ambient traffic + any owned vehicles driving on the roads
   const vehicles = useMemo(() => {
-    const base = VEHICLES.map((spec, i) => ({ spec, id: `amb_${i}` }));
+    const base = VEHICLES.map((spec, i) => ({ spec, id: `amb_${i}`, owned: false as const }));
     const ownedVehicles = owned.flatMap((a) => {
       const def = CATALOG.find((d) => d.id === a.defId);
       if (!def || def.category !== 'vehicle') return [];
-      return [{ spec: ownedVehicleSpec(a.instanceId, def.color), id: a.instanceId, name: def.name }];
+      return [{
+        spec: ownedVehicleSpec(a.instanceId, def.color),
+        id: a.instanceId,
+        name: def.name,
+        owned: true as const,
+      }];
     });
     return [...base, ...ownedVehicles];
   }, [owned]);
@@ -356,7 +361,7 @@ export function Scene() {
         )}
 
         {/* Traffic simulation — vehicles obey lights, drawn behind houses so buildings occlude them */}
-        <TrafficSim specs={vehicles} />
+        <TrafficSim specs={vehicles} onOwnedClick={(id) => setPendingSellId(id)} />
 
         {/* All items sorted back-to-front */}
         <AnimatePresence>
@@ -939,7 +944,13 @@ function edgeOpacity(v: RuntimeVehicle): number {
   return Math.max(0, Math.min(1, Math.min(fromStart, fromEnd) / FADE_DIST));
 }
 
-function TrafficSim({ specs }: { specs: Array<{ spec: VehicleSpec; id: string; name?: string }> }) {
+function TrafficSim({
+  specs,
+  onOwnedClick,
+}: {
+  specs: Array<{ spec: VehicleSpec; id: string; name?: string; owned: boolean }>;
+  onOwnedClick: (id: string) => void;
+}) {
   const vehicleRefs = useRef(new Map<string, SVGGElement | null>());
   const lightRefs = useRef(new Map<string, SVGCircleElement | null>());
   const states = useRef<RuntimeVehicle[]>([]);
@@ -1015,13 +1026,15 @@ function TrafficSim({ specs }: { specs: Array<{ spec: VehicleSpec; id: string; n
         )}
       </g>
       <g>
-        {specs.map(({ spec, id, name }) => (
+        {specs.map(({ spec, id, name, owned }) => (
           <g
             key={id}
             ref={(el) => {
               if (el) vehicleRefs.current.set(id, el);
               else vehicleRefs.current.delete(id);
             }}
+            onClick={owned ? () => onOwnedClick(id) : undefined}
+            style={owned ? { cursor: 'pointer' } : undefined}
           >
             <IsoVehicle kind={spec.kind} dir={dirOf(spec)} color={spec.color} color2={spec.color2} />
             {name && (
