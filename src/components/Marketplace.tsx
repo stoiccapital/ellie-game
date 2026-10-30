@@ -143,6 +143,17 @@ export function Marketplace() {
                 {tab !== 'etf' && (
                   <div className="flex items-center gap-3 mt-2 text-[11px] text-muted">
                     <span>Yield <span className="num text-ink">{pct(annualYield)}</span></span>
+                    {tab === 'business' && def.maxOwned !== undefined && (() => {
+                      const ownedOfType = owned.filter((a) => a.defId === def.id).length;
+                      return (
+                        <span>
+                          Owned <span className={cn('num', ownedOfType >= def.maxOwned ? 'text-bad' : 'text-ink')}>
+                            {ownedOfType}
+                          </span>
+                          /<span className="num text-ink">{def.maxOwned}</span>
+                        </span>
+                      );
+                    })()}
                   </div>
                 )}
                 <div className="mt-2 flex items-center gap-2">
@@ -178,10 +189,16 @@ export function Marketplace() {
                     </>
                   ) : tab === 'business' ? (
                     (() => {
-                      const maxQty = Math.max(0, Math.floor(capital / def.price));
+                      const ownedOfType = owned.filter((a) => a.defId === def.id).length;
+                      const remainingCap = def.maxOwned !== undefined
+                        ? Math.max(0, def.maxOwned - ownedOfType)
+                        : Infinity;
+                      const affordableQty = Math.max(0, Math.floor(capital / def.price));
+                      const maxQty = Math.min(affordableQty, remainingCap);
                       const qty = Math.max(0, Math.floor(Number(bizQty[def.id] || 0)));
                       const canBuy = qty > 0 && qty <= maxQty;
                       const total = qty * def.price;
+                      const atCap = remainingCap <= 0;
                       return (
                         <>
                           <input
@@ -191,7 +208,8 @@ export function Marketplace() {
                             value={bizQty[def.id] ?? ''}
                             onChange={(e) => setBizQty({ ...bizQty, [def.id]: e.target.value })}
                             placeholder="Qty"
-                            className="w-16 h-7 px-2 rounded-md bg-panel border border-line text-xs num text-ink focus:outline-none focus:border-ink/40"
+                            disabled={atCap}
+                            className="w-16 h-7 px-2 rounded-md bg-panel border border-line text-xs num text-ink focus:outline-none focus:border-ink/40 disabled:opacity-50"
                           />
                           <button
                             onClick={() => setBizQty({ ...bizQty, [def.id]: String(maxQty) })}
@@ -202,7 +220,7 @@ export function Marketplace() {
                                 ? 'border-line text-muted hover:text-ink hover:border-ink/40'
                                 : 'border-line text-muted/50 cursor-not-allowed',
                             )}
-                            title={`Max ${maxQty} affordable`}
+                            title={`Max ${maxQty}`}
                           >
                             Max {maxQty}
                           </button>
@@ -219,7 +237,9 @@ export function Marketplace() {
                                 : 'bg-line text-muted cursor-not-allowed',
                             )}
                           >
-                            {qty <= 0
+                            {atCap
+                              ? 'At cap'
+                              : qty <= 0
                               ? `Buy · ${moneyFull(def.price)}`
                               : qty > maxQty
                               ? 'Short'

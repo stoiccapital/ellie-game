@@ -19,6 +19,9 @@ export interface AssetDef {
   sprite?: string;
   // Monthly price volatility (fraction, e.g., 0.04 = ±4% noise). Only used for ETFs.
   volatility?: number;
+  // Max number of units the player can own. Undefined = no cap.
+  // Reflects operational reality: a solo freelance studio can't be owned 10× by one person.
+  maxOwned?: number;
 }
 
 export interface OwnedAsset {

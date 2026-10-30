@@ -147,6 +147,12 @@ export const useGame = create<GameState>()(
       if (vehicles >= 1 + plotTakers) return false;
     }
 
+    // Per-type ownership cap (e.g., 1 freelance studio since it's solo work).
+    if (def.maxOwned !== undefined) {
+      const ownedOfType = s.owned.filter((a) => a.defId === defId).length;
+      if (ownedOfType >= def.maxOwned) return false;
+    }
+
     // ETFs accept a dollar amount (fractional shares). Everything else is a fixed-price unit.
     const spend = def.category === 'etf' && dollars !== undefined ? dollars : def.price;
     if (spend <= 0) return false;
@@ -187,6 +193,13 @@ export const useGame = create<GameState>()(
       }).length;
       const parkingLeft = Math.max(0, 1 + plotTakers - vehicles);
       want = Math.min(want, parkingLeft);
+    }
+
+    // Per-type ownership cap.
+    if (def.maxOwned !== undefined) {
+      const ownedOfType = s.owned.filter((a) => a.defId === defId).length;
+      const remaining = Math.max(0, def.maxOwned - ownedOfType);
+      want = Math.min(want, remaining);
     }
 
     if (want <= 0) return 0;
