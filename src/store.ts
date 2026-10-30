@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CATALOG, BANKRUPTCY_THRESHOLD, HOME_APPRECIATION_YEARLY, JOB_LEVELS, LIVING_EXPENSE, MAX_LTV, MORTGAGE_PAYMENT_FACTOR_MONTHLY, MORTGAGE_RATE_YEARLY, NEIGHBORS, RENT_MONTHLY, STARTING_CAPITAL, STARTING_DEBT, STARTING_HOME_VALUE } from './catalog';
+import { CATALOG, BANKRUPTCY_THRESHOLD, CAREER_TRACKS, DEFAULT_CAREER_TRACK_ID, HOME_APPRECIATION_YEARLY, LIVING_EXPENSE, MAX_LTV, MORTGAGE_PAYMENT_FACTOR_MONTHLY, MORTGAGE_RATE_YEARLY, NEIGHBORS, RENT_MONTHLY, STARTING_CAPITAL, STARTING_DEBT, STARTING_HOME_VALUE } from './catalog';
 import type { OwnedAsset, Speed } from './types';
 
 interface GameState {
@@ -17,6 +17,10 @@ interface GameState {
   clearedPlots: number[];
   debt: number;
   jobLevel: number;
+  // Month index at which the player entered the current level. Promotion requires
+  // staying in-role for `tenureRequired` months before paying the training cost.
+  jobLevelSinceMonth: number;
+  careerTrackId: string;
   homeModalOpen: boolean;
   bankModalOpen: boolean;
   careerModalOpen: boolean;
@@ -35,6 +39,7 @@ interface GameState {
   repay: (amount: number) => boolean;
   sellHome: () => void;
   upgradeJob: () => boolean;
+  switchCareer: (trackId: string) => boolean;
   reset: () => void;
 }
 
@@ -54,6 +59,8 @@ export const useGame = create<GameState>()(
   clearedPlots: [],
   debt: STARTING_DEBT,
   jobLevel: 0,
+  jobLevelSinceMonth: 0,
+  careerTrackId: DEFAULT_CAREER_TRACK_ID,
   homeModalOpen: false,
   bankModalOpen: false,
   careerModalOpen: false,
@@ -87,7 +94,8 @@ export const useGame = create<GameState>()(
       return { ...asset, currentValue: Math.max(0, nextValue) };
     });
 
-    const salary = JOB_LEVELS[Math.min(s.jobLevel, JOB_LEVELS.length - 1)].salary;
+    const track = CAREER_TRACKS.find((t) => t.id === s.careerTrackId) ?? CAREER_TRACKS[0];
+    const salary = track.levels[Math.min(s.jobLevel, track.levels.length - 1)].salary;
     capital += salary - LIVING_EXPENSE;
 
     // Rent if Ellie has sold her home.
@@ -302,11 +310,29 @@ export const useGame = create<GameState>()(
 
   upgradeJob: () => {
     const s = get();
+    const track = CAREER_TRACKS.find((t) => t.id === s.careerTrackId) ?? CAREER_TRACKS[0];
     const next = s.jobLevel + 1;
-    if (next >= JOB_LEVELS.length) return false;
-    const cost = JOB_LEVELS[next].upgradeCost;
+    if (next >= track.levels.length) return false;
+    const monthsAtLevel = s.month - s.jobLevelSinceMonth;
+    if (monthsAtLevel < track.levels[next].tenureRequired) return false;
+    const cost = track.levels[next].upgradeCost;
     if (s.capital < cost) return false;
-    set({ capital: s.capital - cost, jobLevel: next });
+    set({
+      capital: s.capital - cost,
+      jobLevel: next,
+      jobLevelSinceMonth: s.month,
+    });
+    return true;
+  },
+
+  switchCareer: (trackId) => {
+    const track = CAREER_TRACKS.find((t) => t.id === trackId);
+    if (!track) return false;
+    const s = get();
+    if (s.careerTrackId === trackId) return false;
+    // Switching careers resets you to the entry level at the new corporation
+    // and restarts the tenure clock.
+    set({ careerTrackId: trackId, jobLevel: 0, jobLevelSinceMonth: s.month });
     return true;
   },
 
@@ -336,6 +362,8 @@ export const useGame = create<GameState>()(
       clearedPlots: [],
       debt: STARTING_DEBT,
       jobLevel: 0,
+      jobLevelSinceMonth: 0,
+      careerTrackId: DEFAULT_CAREER_TRACK_ID,
     }),
     }),
     {
@@ -354,6 +382,8 @@ export const useGame = create<GameState>()(
         clearedPlots: s.clearedPlots,
         debt: s.debt,
         jobLevel: s.jobLevel,
+        jobLevelSinceMonth: s.jobLevelSinceMonth,
+        careerTrackId: s.careerTrackId,
       }),
     },
   ),

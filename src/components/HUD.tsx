@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useGame } from '../store';
 import { money, moneyFull, timeStamp } from '../lib/format';
-import { CATALOG, JOB_LEVELS, LIVING_EXPENSE, MORTGAGE_PAYMENT_FACTOR_MONTHLY, RENT_MONTHLY, STARTING_AGE } from '../catalog';
+import { CATALOG, CAREER_TRACKS, LIVING_EXPENSE, MORTGAGE_PAYMENT_FACTOR_MONTHLY, RENT_MONTHLY, STARTING_AGE } from '../catalog';
 import { SpeedControl } from './SpeedControl';
 
 type Tone = 'ink' | 'accent' | 'bad' | 'muted';
@@ -19,8 +19,10 @@ export function HUD() {
   const setBankOpen = useGame((s) => s.setBankModalOpen);
   const setCareerOpen = useGame((s) => s.setCareerModalOpen);
   const jobLevel = useGame((s) => s.jobLevel);
+  const careerTrackId = useGame((s) => s.careerTrackId);
   const reset = useGame((s) => s.reset);
-  const job = JOB_LEVELS[Math.min(jobLevel, JOB_LEVELS.length - 1)];
+  const track = CAREER_TRACKS.find((t) => t.id === careerTrackId) ?? CAREER_TRACKS[0];
+  const job = track.levels[Math.min(jobLevel, track.levels.length - 1)];
 
   const { cashflow, assetValue } = useMemo(() => {
     let cf = job.salary - LIVING_EXPENSE;
@@ -74,7 +76,7 @@ export function HUD() {
       {/* Row 2 — clickable account chips, secondary stats, action buttons */}
       <div className="flex items-center gap-2 px-5 h-11 border-t border-line/60">
         <Chip
-          label={job.title}
+          label={`${job.title} · ${track.company}`}
           value={`+${money(job.salary)} /mo`}
           tone="muted"
           onClick={() => setCareerOpen(true)}

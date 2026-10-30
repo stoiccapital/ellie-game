@@ -611,20 +611,75 @@ export const LIVING_EXPENSE = 1_800;
 // Legacy constant kept for the HUD "Salary" label — JOB_LEVELS[0].salary.
 export const JOB_SALARY = 3_500;
 
-// Career ladder. Pay the training cost to level up and unlock the higher salary.
+// Career ladder. Each track is a corporate ladder at a named corporation.
+// Pay the training cost AND serve the tenure to level up to a higher salary.
 export interface JobLevel {
   title: string;
   salary: number;
   upgradeCost: number;
+  // Months the player must have spent in the previous level before this one unlocks.
+  // Ignored on the entry level (index 0).
+  tenureRequired: number;
 }
-export const JOB_LEVELS: JobLevel[] = [
-  { title: 'Analyst', salary: 3_500, upgradeCost: 0 },
-  { title: 'Senior Analyst', salary: 5_500, upgradeCost: 8_000 },
-  { title: 'Manager', salary: 8_500, upgradeCost: 25_000 },
-  { title: 'Director', salary: 13_500, upgradeCost: 60_000 },
-  { title: 'VP', salary: 20_000, upgradeCost: 140_000 },
-  { title: 'C-Suite', salary: 32_000, upgradeCost: 300_000 },
+export interface CareerTrack {
+  id: string;
+  name: string;
+  company: string;
+  tagline: string;
+  color: string;
+  levels: JobLevel[];
+}
+export const CAREER_TRACKS: CareerTrack[] = [
+  {
+    id: 'finance',
+    name: 'Finance',
+    company: 'Goldstone Capital',
+    tagline: 'Investment banking. Grueling hours, highest ceiling.',
+    color: '#5a8a9c',
+    levels: [
+      { title: 'Analyst',           salary:  5_000, upgradeCost:      0, tenureRequired:  0 },
+      { title: 'Associate',         salary:  8_500, upgradeCost: 12_000, tenureRequired: 12 },
+      { title: 'Vice President',    salary: 14_000, upgradeCost: 35_000, tenureRequired: 24 },
+      { title: 'Director',          salary: 24_000, upgradeCost: 100_000, tenureRequired: 36 },
+      { title: 'Managing Director', salary: 42_000, upgradeCost: 260_000, tenureRequired: 48 },
+      { title: 'Partner',           salary: 72_000, upgradeCost: 600_000, tenureRequired: 60 },
+    ],
+  },
+  {
+    id: 'tech',
+    name: 'Tech',
+    company: 'Vertex Labs',
+    tagline: 'Product + engineering. Balanced pace, equity-heavy.',
+    color: '#5a8a52',
+    levels: [
+      { title: 'Junior Engineer',       salary:  4_000, upgradeCost:      0, tenureRequired:  0 },
+      { title: 'Software Engineer',     salary:  7_000, upgradeCost:  8_000, tenureRequired: 12 },
+      { title: 'Senior Engineer',       salary: 11_500, upgradeCost: 22_000, tenureRequired: 18 },
+      { title: 'Staff Engineer',        salary: 18_000, upgradeCost: 65_000, tenureRequired: 24 },
+      { title: 'Principal Engineer',    salary: 28_000, upgradeCost: 160_000, tenureRequired: 36 },
+      { title: 'Distinguished Engineer',salary: 48_000, upgradeCost: 380_000, tenureRequired: 48 },
+    ],
+  },
+  {
+    id: 'consulting',
+    name: 'Consulting',
+    company: 'Northstar Advisory',
+    tagline: 'Strategy consulting. Steady, travel-heavy, prestige-lite.',
+    color: '#b48ac1',
+    levels: [
+      { title: 'Analyst',         salary:  3_500, upgradeCost:      0, tenureRequired:  0 },
+      { title: 'Consultant',      salary:  6_000, upgradeCost:  6_500, tenureRequired: 12 },
+      { title: 'Manager',         salary: 10_000, upgradeCost: 18_000, tenureRequired: 18 },
+      { title: 'Senior Manager',  salary: 15_500, upgradeCost: 50_000, tenureRequired: 24 },
+      { title: 'Partner',         salary: 24_000, upgradeCost: 130_000, tenureRequired: 36 },
+      { title: 'Senior Partner',  salary: 40_000, upgradeCost: 300_000, tenureRequired: 48 },
+    ],
+  },
 ];
+// Legacy single ladder — kept so any imports still typecheck during the migration.
+// Points at the Tech track as the default.
+export const JOB_LEVELS: JobLevel[] = CAREER_TRACKS.find((t) => t.id === 'tech')!.levels;
+export const DEFAULT_CAREER_TRACK_ID = 'tech';
 // Monthly rent Ellie pays if she sells her home.
 export const RENT_MONTHLY = 2_000;
 export const STARTING_CAPITAL = 100_000;
