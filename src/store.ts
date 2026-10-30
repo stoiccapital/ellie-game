@@ -27,6 +27,7 @@ interface GameState {
   setCareerModalOpen: (open: boolean) => void;
   setSpeed: (s: Speed) => void;
   buyAsset: (defId: string, dollars?: number) => boolean;
+  buyAssetBulk: (defId: string, qty: number) => number;
   buyNeighbor: (plotIndex: number) => boolean;
   sellAsset: (instanceId: string) => void;
   redevelopAsset: (instanceId: string, newDefId: string) => boolean;
@@ -160,6 +161,48 @@ export const useGame = create<GameState>()(
     };
     set({ capital: s.capital - spend, owned: [...s.owned, owned] });
     return true;
+  },
+
+  buyAssetBulk: (defId, qty) => {
+    const def = CATALOG.find((d) => d.id === defId);
+    if (!def) return 0;
+    // Plot-occupying categories must come via buyNeighbor / redevelop.
+    if (def.category === 'real_estate' || def.category === 'tower' || def.category === 'commercial' || def.category === 'land') return 0;
+    // ETFs are dollar-denominated; use buyAsset(defId, dollars) instead.
+    if (def.category === 'etf') return 0;
+
+    const s = get();
+    let want = Math.max(0, Math.floor(qty));
+    if (want <= 0) return 0;
+
+    // Cap by affordability.
+    want = Math.min(want, Math.floor(s.capital / def.price));
+
+    // Vehicle parking cap: 1 base + 1 per owned plot.
+    if (def.category === 'vehicle') {
+      const plotTakers = s.owned.filter((a) => a.plotIndex !== undefined).length;
+      const vehicles = s.owned.filter((a) => {
+        const d = CATALOG.find((c) => c.id === a.defId);
+        return d?.category === 'vehicle';
+      }).length;
+      const parkingLeft = Math.max(0, 1 + plotTakers - vehicles);
+      want = Math.min(want, parkingLeft);
+    }
+
+    if (want <= 0) return 0;
+
+    const newOwned: OwnedAsset[] = [];
+    for (let i = 0; i < want; i++) {
+      newOwned.push({
+        instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}_${i}`,
+        defId,
+        purchasedMonth: s.month,
+        purchasePrice: def.price,
+        currentValue: def.price,
+      });
+    }
+    set({ capital: s.capital - want * def.price, owned: [...s.owned, ...newOwned] });
+    return want;
   },
 
   buyNeighbor: (plotIndex) => {

@@ -18,8 +18,10 @@ export function Marketplace() {
   const capital = useGame((s) => s.capital);
   const owned = useGame((s) => s.owned);
   const buyAsset = useGame((s) => s.buyAsset);
+  const buyAssetBulk = useGame((s) => s.buyAssetBulk);
   const [tab, setTab] = useState<TabKey>('vehicle');
   const [etfAmount, setEtfAmount] = useState<Record<string, string>>({});
+  const [bizQty, setBizQty] = useState<Record<string, string>>({});
 
   const { plotTakerCount, vehicleCount } = useMemo(() => {
     let p = 0;
@@ -174,6 +176,58 @@ export function Marketplace() {
                         Buy
                       </button>
                     </>
+                  ) : tab === 'business' ? (
+                    (() => {
+                      const maxQty = Math.max(0, Math.floor(capital / def.price));
+                      const qty = Math.max(0, Math.floor(Number(bizQty[def.id] || 0)));
+                      const canBuy = qty > 0 && qty <= maxQty;
+                      const total = qty * def.price;
+                      return (
+                        <>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={bizQty[def.id] ?? ''}
+                            onChange={(e) => setBizQty({ ...bizQty, [def.id]: e.target.value })}
+                            placeholder="Qty"
+                            className="w-16 h-7 px-2 rounded-md bg-panel border border-line text-xs num text-ink focus:outline-none focus:border-ink/40"
+                          />
+                          <button
+                            onClick={() => setBizQty({ ...bizQty, [def.id]: String(maxQty) })}
+                            disabled={maxQty <= 0}
+                            className={cn(
+                              'h-7 px-2 rounded-md text-[11px] font-semibold border transition-colors',
+                              maxQty > 0
+                                ? 'border-line text-muted hover:text-ink hover:border-ink/40'
+                                : 'border-line text-muted/50 cursor-not-allowed',
+                            )}
+                            title={`Max ${maxQty} affordable`}
+                          >
+                            Max {maxQty}
+                          </button>
+                          <button
+                            onClick={() => {
+                              const bought = buyAssetBulk(def.id, qty);
+                              if (bought > 0) setBizQty({ ...bizQty, [def.id]: '' });
+                            }}
+                            disabled={!canBuy}
+                            className={cn(
+                              'flex-1 h-7 px-3 rounded-md text-[11px] font-semibold transition-colors',
+                              canBuy
+                                ? 'bg-accent text-black hover:bg-emerald-300'
+                                : 'bg-line text-muted cursor-not-allowed',
+                            )}
+                          >
+                            {qty <= 0
+                              ? `Buy · ${moneyFull(def.price)}`
+                              : qty > maxQty
+                              ? 'Short'
+                              : `Buy ${qty} · ${moneyFull(total)}`}
+                          </button>
+                        </>
+                      );
+                    })()
                   ) : (
                     <button
                       onClick={() => buyAsset(def.id)}
