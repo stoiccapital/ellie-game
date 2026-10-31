@@ -23,6 +23,7 @@ export function AssetSprite({ category, color, size = 1, floors, sprite }: Props
       case 'gym': return <GymSprite color={color} scale={s} />;
       case 'cinema': return <CinemaSprite color={color} scale={s} />;
       case 'villa': return <VillaSprite color={color} scale={s} />;
+      case 'penthouse': return <PenthouseSprite color={color} scale={s} />;
       case 'mansion': return <MansionSprite color={color} scale={s} />;
       case 'estate': return <EstateSprite color={color} scale={s} />;
     }
@@ -866,6 +867,146 @@ function VillaSprite({ color, scale }: { color: string; scale: number }) {
       {/* Palms at corners */}
       <Palm x={-bw - 6 * s} y={-bd - 1} scale={s} />
       <Palm x={bw + 6 * s} y={-bd - 1} scale={s} />
+    </g>
+  );
+}
+
+function PenthouseSprite({ color, scale }: { color: string; scale: number }) {
+  const s = scale;
+  // Narrow glassy tower. The player lives on the lit top floor; the deck above
+  // reads as the actual penthouse amenity.
+  const bw = 14 * s;
+  const bd = 9 * s;
+  const towerH = 60 * s;
+  const penthouseH = 10 * s; // top floor height, rendered a touch wider & brighter
+  const penthouseBw = bw * 1.1;
+  const penthouseBd = bd * 1.1;
+  const deckH = 2 * s; // rooftop deck slab
+  const gold = '#f2d6a0';
+  const glass = '#8ec7df';
+  const roofC = shade(color, -0.35);
+
+  // Floor-count hint for the glass façade.
+  const floors = 14;
+
+  return (
+    <g>
+      {/* Garden base */}
+      <polygon
+        points={`0,${-bd * 2 - 2} ${bw + 12 * s},${-2} 0,${bd * 2 + 8 * s} ${-bw - 12 * s},${-2}`}
+        fill="#466f46"
+        opacity={0.8}
+      />
+      {/* Entrance plaza */}
+      <polygon
+        points={`0,${bd - 1} ${bw + 7 * s},${bd + 2 * s} 0,${bd + 10 * s} ${-bw - 7 * s},${bd + 2 * s}`}
+        fill="#5a6668"
+        opacity={0.85}
+      />
+      <Palm x={-bw - 8 * s} y={bd + 2 * s} scale={s * 0.9} />
+      <Palm x={bw + 8 * s} y={bd + 2 * s} scale={s * 0.9} />
+
+      {/* Main glass tower */}
+      <IsoMass
+        bw={bw}
+        bd={bd}
+        h={towerH}
+        color={color}
+        roofColor={roofC}
+        roofPitch={0}
+        windowRows={floors}
+        windowCols={2}
+        windowColor={glass}
+        windowOpacity={0.55}
+      />
+      {/* Thin vertical mullion stripes for a modern façade */}
+      {[0.33, 0.66].map((u, i) => {
+        const [xTopW, yTopW] = westPt(bw, bd, towerH, u, 1);
+        const [xBotW, yBotW] = westPt(bw, bd, towerH, u, 0);
+        const [xTopE, yTopE] = eastPt(bw, bd, towerH, u, 1);
+        const [xBotE, yBotE] = eastPt(bw, bd, towerH, u, 0);
+        return (
+          <g key={i}>
+            <line x1={xTopW} y1={yTopW} x2={xBotW} y2={yBotW} stroke={shade(color, -0.3)} strokeWidth={0.4} />
+            <line x1={xTopE} y1={yTopE} x2={xBotE} y2={yBotE} stroke={shade(color, -0.3)} strokeWidth={0.4} />
+          </g>
+        );
+      })}
+      {/* Horizontal gold band separating the penthouse from the rest */}
+      <line
+        x1={-bw}
+        y1={-bd - towerH + 0.4}
+        x2={0}
+        y2={bd - towerH + 0.4}
+        stroke={gold}
+        strokeWidth={0.8}
+      />
+      <line
+        x1={0}
+        y1={bd - towerH + 0.4}
+        x2={bw}
+        y2={-bd - towerH + 0.4}
+        stroke={gold}
+        strokeWidth={0.8}
+      />
+
+      {/* Penthouse floor — slightly wider, brighter window glow */}
+      <g transform={`translate(0, ${-towerH})`}>
+        <IsoMass
+          bw={penthouseBw}
+          bd={penthouseBd}
+          h={penthouseH}
+          color={shade(color, 0.1)}
+          roofColor={roofC}
+          roofPitch={0}
+          trim={gold}
+          windowRows={1}
+          windowCols={3}
+          windowColor="#fff2b8"
+          windowOpacity={0.95}
+        />
+      </g>
+
+      {/* Rooftop deck + pool + loungers above the penthouse */}
+      <g transform={`translate(0, ${-towerH - penthouseH})`}>
+        {/* Deck slab */}
+        <polygon
+          points={`${-penthouseBw},${-penthouseBd} 0,${penthouseBd} ${penthouseBw},${-penthouseBd} 0,${-penthouseBd * 2}`}
+          fill="#d8c7a0"
+        />
+        <polygon
+          points={`${-penthouseBw},${-penthouseBd - deckH} 0,${penthouseBd - deckH} ${penthouseBw},${-penthouseBd - deckH} 0,${-penthouseBd * 2 - deckH}`}
+          fill="#efe3c2"
+        />
+        {/* Deck side faces */}
+        <polygon
+          points={`${-penthouseBw},${-penthouseBd} 0,${penthouseBd} 0,${penthouseBd - deckH} ${-penthouseBw},${-penthouseBd - deckH}`}
+          fill={shade('#d8c7a0', -0.15)}
+        />
+        <polygon
+          points={`0,${penthouseBd} ${penthouseBw},${-penthouseBd} ${penthouseBw},${-penthouseBd - deckH} 0,${penthouseBd - deckH}`}
+          fill={shade('#d8c7a0', -0.05)}
+        />
+        {/* Rooftop pool */}
+        <Pool cx={0} cy={penthouseBd * 0.1 - deckH - 2 * s} w={penthouseBw * 0.55} d={2.4 * s} color="#4a9ab8" />
+        {/* Hedge planter at the back of the deck */}
+        <Hedge x={-penthouseBw * 0.45} y={-penthouseBd - deckH - 2} w={6 * s} scale={s * 0.75} />
+        <Hedge x={penthouseBw * 0.45} y={-penthouseBd - deckH - 2} w={6 * s} scale={s * 0.75} />
+        {/* Loungers (two tiny tilted rectangles) */}
+        {[-0.3, 0.3].map((u, i) => (
+          <g key={i} transform={`translate(${penthouseBw * u}, ${-deckH - 3})`}>
+            <rect x={-3} y={-1.1} width={6} height={2} fill="#f8e7bb" />
+            <rect x={-3} y={-1.5} width={6} height={0.5} fill={gold} />
+          </g>
+        ))}
+        {/* Gold railing stripe along the deck edge */}
+        <polyline
+          points={`${-penthouseBw},${-penthouseBd - deckH} 0,${penthouseBd - deckH} ${penthouseBw},${-penthouseBd - deckH}`}
+          fill="none"
+          stroke={gold}
+          strokeWidth={0.5}
+        />
+      </g>
     </g>
   );
 }

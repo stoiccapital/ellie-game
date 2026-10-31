@@ -764,6 +764,15 @@ export const HOME_TIERS: HomeTier[] = [
     visual: { category: 'commercial', sprite: 'villa', color: '#f0e6cf', size: 1.15 },
   },
   {
+    id: 'penthouse',
+    name: 'Penthouse',
+    price: 2_500_000,
+    monthlyExpense: 5_200,
+    appreciationYearly: 0.035,
+    description: 'Top-floor sky residence. Floor-to-ceiling glass, rooftop deck.',
+    visual: { category: 'commercial', sprite: 'penthouse', color: '#9fb6c9', size: 1.0 },
+  },
+  {
     id: 'mansion',
     name: 'Mansion',
     price: 4_000_000,
