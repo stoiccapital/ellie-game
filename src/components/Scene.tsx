@@ -433,44 +433,10 @@ export function Scene() {
         {/* Per-plot pads — show the land allocated to each lot */}
         <g>{plotPads}</g>
 
-        {/* Road center lane markings — solid yellow dashes on each street
-            row/column. Visible against the medium-gray asphalt. */}
-        <g>
-          {STREETS_Y.map((s) => {
-            const a = iso(X_MIN - 0.5, s);
-            const b = iso(X_MAX + 0.5, s);
-            return (
-              <line
-                key={`hr${s}`}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                stroke="#f2c15a"
-                strokeWidth={1.1}
-                strokeDasharray="10 8"
-                opacity={0.85}
-              />
-            );
-          })}
-          {STREETS_X.map((s) => {
-            const a = iso(s, Y_MIN - 0.5);
-            const b = iso(s, Y_MAX + 0.5);
-            return (
-              <line
-                key={`vr${s}`}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                stroke="#f2c15a"
-                strokeWidth={1.1}
-                strokeDasharray="10 8"
-                opacity={0.85}
-              />
-            );
-          })}
-        </g>
+        {/* Road markings — grouped by street band width.
+            Scale: 1 cell = 10 m, so a 1-cell gap is a 10 m residential alley,
+            2-cell = 20 m urban avenue, 3-cell = 30 m downtown boulevard. */}
+        <StreetMarkings axesX={STREETS_X} axesY={STREETS_Y} xMin={X_MIN} xMax={X_MAX} yMin={Y_MIN} yMax={Y_MAX} />
 
         {/* Warm glow under Ellie's house (centered on her plot) */}
         {hasHome && (() => {
@@ -1641,5 +1607,129 @@ function UpgradeBurst({ x, y }: { x: number; y: number }) {
         ))}
       </motion.g>
     </g>
+  );
+}
+
+// ─── Street markings ────────────────────────────────────────────────────────
+// Groups consecutive full-street axes into bands and draws per-band stripes.
+// Scale: 1 cell = 10 m. 1-cell band = residential alley (yellow center dash).
+// 2-cell band = urban avenue (white dashed lane divider down the middle).
+// 3-cell band = boulevard (two solid white edge lines + dashed yellow median).
+interface StreetBand {
+  center: number; // midpoint between the first and last full-street cell
+  edgeLo: number; // outer edge of the band (plot side, low)
+  edgeHi: number; // outer edge of the band (plot side, high)
+  cells: number;  // width in cells
+}
+
+function groupBands(axis: number[]): StreetBand[] {
+  if (axis.length === 0) return [];
+  const sorted = [...axis].sort((a, b) => a - b);
+  const bands: StreetBand[] = [];
+  let start = sorted[0];
+  let end = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end + 1) {
+      end = sorted[i];
+    } else {
+      bands.push({ center: (start + end) / 2, edgeLo: start - 0.5, edgeHi: end + 0.5, cells: end - start + 1 });
+      start = sorted[i];
+      end = sorted[i];
+    }
+  }
+  bands.push({ center: (start + end) / 2, edgeLo: start - 0.5, edgeHi: end + 0.5, cells: end - start + 1 });
+  return bands;
+}
+
+function StreetMarkings({
+  axesX,
+  axesY,
+  xMin,
+  xMax,
+  yMin,
+  yMax,
+}: {
+  axesX: number[];
+  axesY: number[];
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+}) {
+  const bandsX = groupBands(axesX);
+  const bandsY = groupBands(axesY);
+
+  const renderHorizontal = (b: StreetBand, key: string) => {
+    const stripes: React.ReactNode[] = [];
+    const a0 = iso(xMin - 0.5, b.center);
+    const b0 = iso(xMax + 0.5, b.center);
+    if (b.cells === 1) {
+      // Residential alley — thin yellow center dash
+      stripes.push(
+        <line key={`${key}c`} x1={a0.x} y1={a0.y} x2={b0.x} y2={b0.y}
+          stroke="#f2c15a" strokeWidth={0.9} strokeDasharray="8 6" opacity={0.75} />,
+      );
+    } else if (b.cells === 2) {
+      // Urban avenue — white dashed lane divider down the middle
+      stripes.push(
+        <line key={`${key}c`} x1={a0.x} y1={a0.y} x2={b0.x} y2={b0.y}
+          stroke="#f6f0d6" strokeWidth={1.1} strokeDasharray="12 8" opacity={0.85} />,
+      );
+    } else {
+      // Boulevard — solid white edge lines + yellow dashed median
+      const edgeOff = 0.35; // half-cell offset to each side of center
+      const eLoA = iso(xMin - 0.5, b.center - edgeOff);
+      const eLoB = iso(xMax + 0.5, b.center - edgeOff);
+      const eHiA = iso(xMin - 0.5, b.center + edgeOff);
+      const eHiB = iso(xMax + 0.5, b.center + edgeOff);
+      stripes.push(
+        <line key={`${key}eLo`} x1={eLoA.x} y1={eLoA.y} x2={eLoB.x} y2={eLoB.y}
+          stroke="#f6f0d6" strokeWidth={1.3} opacity={0.9} />,
+        <line key={`${key}eHi`} x1={eHiA.x} y1={eHiA.y} x2={eHiB.x} y2={eHiB.y}
+          stroke="#f6f0d6" strokeWidth={1.3} opacity={0.9} />,
+        <line key={`${key}m`} x1={a0.x} y1={a0.y} x2={b0.x} y2={b0.y}
+          stroke="#f2c15a" strokeWidth={1.0} strokeDasharray="14 10" opacity={0.85} />,
+      );
+    }
+    return <g key={key}>{stripes}</g>;
+  };
+
+  const renderVertical = (b: StreetBand, key: string) => {
+    const stripes: React.ReactNode[] = [];
+    const a0 = iso(b.center, yMin - 0.5);
+    const b0 = iso(b.center, yMax + 0.5);
+    if (b.cells === 1) {
+      stripes.push(
+        <line key={`${key}c`} x1={a0.x} y1={a0.y} x2={b0.x} y2={b0.y}
+          stroke="#f2c15a" strokeWidth={0.9} strokeDasharray="8 6" opacity={0.75} />,
+      );
+    } else if (b.cells === 2) {
+      stripes.push(
+        <line key={`${key}c`} x1={a0.x} y1={a0.y} x2={b0.x} y2={b0.y}
+          stroke="#f6f0d6" strokeWidth={1.1} strokeDasharray="12 8" opacity={0.85} />,
+      );
+    } else {
+      const edgeOff = 0.35;
+      const eLoA = iso(b.center - edgeOff, yMin - 0.5);
+      const eLoB = iso(b.center - edgeOff, yMax + 0.5);
+      const eHiA = iso(b.center + edgeOff, yMin - 0.5);
+      const eHiB = iso(b.center + edgeOff, yMax + 0.5);
+      stripes.push(
+        <line key={`${key}eLo`} x1={eLoA.x} y1={eLoA.y} x2={eLoB.x} y2={eLoB.y}
+          stroke="#f6f0d6" strokeWidth={1.3} opacity={0.9} />,
+        <line key={`${key}eHi`} x1={eHiA.x} y1={eHiA.y} x2={eHiB.x} y2={eHiB.y}
+          stroke="#f6f0d6" strokeWidth={1.3} opacity={0.9} />,
+        <line key={`${key}m`} x1={a0.x} y1={a0.y} x2={b0.x} y2={b0.y}
+          stroke="#f2c15a" strokeWidth={1.0} strokeDasharray="14 10" opacity={0.85} />,
+      );
+    }
+    return <g key={key}>{stripes}</g>;
+  };
+
+  return (
+    <>
+      {bandsY.map((b, i) => renderHorizontal(b, `h${i}`))}
+      {bandsX.map((b, i) => renderVertical(b, `v${i}`))}
+    </>
   );
 }
