@@ -702,8 +702,73 @@ export const STARTING_HOME_VALUE = 350_000;
 // Ellie bought the house with a mortgage. ~85% LTV, standard first-home loan.
 export const STARTING_DEBT = 295_000;
 export const STARTING_AGE = 25;
+// Default fallback appreciation; the active tier overrides this per-month.
 export const HOME_APPRECIATION_YEARLY = 0.03;
 export const BANKRUPTCY_THRESHOLD = -25_000;
+
+// Home tiers Ellie can live in. Upgrading sells the current place at its market
+// value, pays off the mortgage from proceeds, then buys the new tier at list price.
+export interface HomeTier {
+  id: string;
+  name: string;
+  price: number;
+  // Monthly upkeep: property tax + insurance + maintenance + utilities, roughly
+  // 1.5-2% of home value per year, higher share at the luxury end.
+  monthlyExpense: number;
+  appreciationYearly: number;
+  description: string;
+}
+export const HOME_TIERS: HomeTier[] = [
+  {
+    id: 'studio',
+    name: 'Studio Apartment',
+    price: 150_000,
+    monthlyExpense: 350,
+    appreciationYearly: 0.025,
+    description: 'Small one-room condo. Minimal upkeep.',
+  },
+  {
+    id: 'starter',
+    name: 'Starter Home',
+    price: 350_000,
+    monthlyExpense: 800,
+    appreciationYearly: 0.03,
+    description: 'Modest suburban house. Classic first home.',
+  },
+  {
+    id: 'townhouse',
+    name: 'Townhouse',
+    price: 650_000,
+    monthlyExpense: 1_400,
+    appreciationYearly: 0.03,
+    description: 'Three-floor row house in a nicer neighborhood.',
+  },
+  {
+    id: 'villa',
+    name: 'Luxury Villa',
+    price: 1_500_000,
+    monthlyExpense: 3_500,
+    appreciationYearly: 0.035,
+    description: 'Private garden, pool, prestige address.',
+  },
+  {
+    id: 'mansion',
+    name: 'Mansion',
+    price: 4_000_000,
+    monthlyExpense: 9_500,
+    appreciationYearly: 0.04,
+    description: 'Multi-wing estate with staff quarters.',
+  },
+  {
+    id: 'estate',
+    name: 'Luxury Estate',
+    price: 12_000_000,
+    monthlyExpense: 28_000,
+    appreciationYearly: 0.04,
+    description: 'Trophy property. Private cinema, vineyard, helipad.',
+  },
+];
+export const STARTING_HOME_TIER_ID = 'starter';
 // Bank
 export const MORTGAGE_RATE_YEARLY = 0.065;
 // 30-year amortizing mortgage. The monthly payment factor is the k in

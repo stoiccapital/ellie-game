@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { CATALOG, BANKRUPTCY_THRESHOLD, CAREER_TRACKS, DEFAULT_CAREER_TRACK_ID, HOME_APPRECIATION_YEARLY, LIVING_EXPENSE, MAX_LTV, MORTGAGE_PAYMENT_FACTOR_MONTHLY, MORTGAGE_RATE_YEARLY, NEIGHBORS, RENT_MONTHLY, STARTING_CAPITAL, STARTING_DEBT, STARTING_HOME_VALUE } from './catalog';
+import { CATALOG, BANKRUPTCY_THRESHOLD, CAREER_TRACKS, DEFAULT_CAREER_TRACK_ID, HOME_TIERS, LIVING_EXPENSE, MAX_LTV, MORTGAGE_PAYMENT_FACTOR_MONTHLY, MORTGAGE_RATE_YEARLY, NEIGHBORS, RENT_MONTHLY, STARTING_CAPITAL, STARTING_DEBT, STARTING_HOME_TIER_ID, STARTING_HOME_VALUE } from './catalog';
 import type { OwnedAsset, Speed } from './types';
 
 interface GameState {
@@ -10,6 +10,7 @@ interface GameState {
   owned: OwnedAsset[];
   homeValue: number;
   hasHome: boolean;
+  homeTierId: string;
   gameOver: boolean;
   peakNetWorth: number;
   // Plot indices where the neighbor has already been bought out. These stay empty
@@ -38,6 +39,7 @@ interface GameState {
   borrow: (amount: number) => boolean;
   repay: (amount: number) => boolean;
   sellHome: () => void;
+  upgradeHome: (tierId: string) => boolean;
   upgradeJob: () => boolean;
   switchCareer: (trackId: string) => boolean;
   reset: () => void;
@@ -54,6 +56,7 @@ export const useGame = create<GameState>()(
   owned: [],
   homeValue: STARTING_HOME_VALUE,
   hasHome: true,
+  homeTierId: STARTING_HOME_TIER_ID,
   gameOver: false,
   peakNetWorth: STARTING_CAPITAL + STARTING_HOME_VALUE - STARTING_DEBT,
   clearedPlots: [],
@@ -99,9 +102,12 @@ export const useGame = create<GameState>()(
     const salary = track.levels[Math.min(s.jobLevel, track.levels.length - 1)].salary;
     capital += salary - LIVING_EXPENSE;
 
-    // Rent if Ellie has sold her home.
+    // Rent if Ellie has sold her home; otherwise upkeep the owned tier.
+    const tier = HOME_TIERS.find((t) => t.id === s.homeTierId) ?? HOME_TIERS[1];
     if (!s.hasHome) {
       capital -= RENT_MONTHLY;
+    } else {
+      capital -= tier.monthlyExpense;
     }
 
     // Amortizing mortgage: fixed monthly payment covers interest + principal.
@@ -115,7 +121,7 @@ export const useGame = create<GameState>()(
     }
 
     const homeValue = s.hasHome
-      ? s.homeValue * (1 + monthlyRate(HOME_APPRECIATION_YEARLY))
+      ? s.homeValue * (1 + monthlyRate(tier.appreciationYearly))
       : 0;
 
     const assetValue = newOwned.reduce((a, b) => a + b.currentValue, 0);
@@ -351,6 +357,30 @@ export const useGame = create<GameState>()(
     });
   },
 
+  upgradeHome: (tierId) => {
+    const s = get();
+    const target = HOME_TIERS.find((t) => t.id === tierId);
+    if (!target) return false;
+    if (s.hasHome && s.homeTierId === tierId) return false;
+
+    // Sell the current place at market, mortgage paid off from proceeds.
+    const sellPayoff = s.hasHome ? Math.min(s.debt, s.homeValue) : 0;
+    const sellProceeds = s.hasHome ? s.homeValue - sellPayoff : 0;
+
+    // Net cash movement: receive proceeds, pay the new tier's list price.
+    const net = sellProceeds - target.price;
+    if (s.capital + net < BANKRUPTCY_THRESHOLD) return false;
+
+    set({
+      capital: s.capital + net,
+      debt: s.debt - sellPayoff,
+      homeValue: target.price,
+      hasHome: true,
+      homeTierId: tierId,
+    });
+    return true;
+  },
+
   reset: () =>
     set({
       month: 0,
@@ -359,6 +389,7 @@ export const useGame = create<GameState>()(
       owned: [],
       homeValue: STARTING_HOME_VALUE,
       hasHome: true,
+      homeTierId: STARTING_HOME_TIER_ID,
       gameOver: false,
       peakNetWorth: STARTING_CAPITAL + STARTING_HOME_VALUE - STARTING_DEBT,
       clearedPlots: [],
@@ -379,6 +410,7 @@ export const useGame = create<GameState>()(
         owned: s.owned,
         homeValue: s.homeValue,
         hasHome: s.hasHome,
+        homeTierId: s.homeTierId,
         gameOver: s.gameOver,
         peakNetWorth: s.peakNetWorth,
         clearedPlots: s.clearedPlots,
