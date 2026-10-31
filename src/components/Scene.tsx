@@ -155,10 +155,10 @@ export function Scene() {
       for (let gy = Y_MIN; gy <= Y_MAX; gy++) {
         const { x, y } = iso(gx, gy);
         const street = isStreet(gx, gy);
-        // Streets look like asphalt (medium dark gray). Plot cells are dirt-brown
-        // so the plot pad renders a hair lighter and the lot still reads clearly.
-        const fill = street ? '#2a2d33' : '#4a3f32';
-        const stroke = street ? '#1e2026' : '#6b5744';
+        // Streets = medium asphalt gray that stands out against the dark sky.
+        // Plot cells = dark brown dirt so lot pads layered above still read clearly.
+        const fill = street ? '#4e535c' : '#2d2419';
+        const stroke = street ? '#3a3e46' : '#1b150e';
         tiles.push(
           <polygon
             key={`t${gx}_${gy}`}
@@ -433,10 +433,10 @@ export function Scene() {
         {/* Per-plot pads — show the land allocated to each lot */}
         <g>{plotPads}</g>
 
-        {/* Sidewalk highlight on center block edges */}
-        <g opacity={0.5}>
+        {/* Road center lane markings — solid yellow dashes on each street
+            row/column. Visible against the medium-gray asphalt. */}
+        <g>
           {STREETS_Y.map((s) => {
-            // horizontal road center line — spans entire street
             const a = iso(X_MIN - 0.5, s);
             const b = iso(X_MAX + 0.5, s);
             return (
@@ -446,9 +446,10 @@ export function Scene() {
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke="url(#roadStripe)"
-                strokeWidth={1.4}
-                strokeDasharray="6 6"
+                stroke="#f2c15a"
+                strokeWidth={1.1}
+                strokeDasharray="10 8"
+                opacity={0.85}
               />
             );
           })}
@@ -462,9 +463,10 @@ export function Scene() {
                 y1={a.y}
                 x2={b.x}
                 y2={b.y}
-                stroke="url(#roadStripe)"
-                strokeWidth={1.4}
-                strokeDasharray="6 6"
+                stroke="#f2c15a"
+                strokeWidth={1.1}
+                strokeDasharray="10 8"
+                opacity={0.85}
               />
             );
           })}
