@@ -47,6 +47,43 @@ interface GameState {
 
 const monthlyRate = (yearly: number) => Math.pow(1 + yearly, 1 / 12) - 1;
 
+// Merge a new, non-plot purchase into an existing holding of the same defId.
+// ETFs are dollar-denominated: sum currentValue + purchasePrice.
+// Businesses/vehicles are unit-based: weighted-average per-unit values, sum units.
+// Returns the merged record OR null if nothing to merge with.
+function mergeIntoHolding(
+  owned: OwnedAsset[],
+  defId: string,
+  category: string,
+  incoming: { currentValue: number; purchasePrice: number; units: number; purchasedMonth: number },
+): { merged: OwnedAsset; original: OwnedAsset } | null {
+  const existing = owned.find((a) => a.defId === defId && a.plotIndex === undefined);
+  if (!existing) return null;
+  if (category === 'etf') {
+    return {
+      original: existing,
+      merged: {
+        ...existing,
+        currentValue: existing.currentValue + incoming.currentValue,
+        purchasePrice: existing.purchasePrice + incoming.purchasePrice,
+        purchasedMonth: Math.min(existing.purchasedMonth, incoming.purchasedMonth),
+      },
+    };
+  }
+  const oldU = existing.units ?? 1;
+  const total = oldU + incoming.units;
+  return {
+    original: existing,
+    merged: {
+      ...existing,
+      units: total,
+      currentValue: (existing.currentValue * oldU + incoming.currentValue * incoming.units) / total,
+      purchasePrice: (existing.purchasePrice * oldU + incoming.purchasePrice * incoming.units) / total,
+      purchasedMonth: Math.min(existing.purchasedMonth, incoming.purchasedMonth),
+    },
+  };
+}
+
 export const useGame = create<GameState>()(
   persist(
     (set, get) => ({
@@ -173,14 +210,28 @@ export const useGame = create<GameState>()(
     if (spend <= 0) return false;
     if (s.capital < spend) return false;
 
-    const owned: OwnedAsset = {
-      instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
-      defId,
-      purchasedMonth: s.month,
-      purchasePrice: spend,
+    const incoming = {
       currentValue: spend,
+      purchasePrice: spend,
+      units: 1,
+      purchasedMonth: s.month,
     };
-    set({ capital: s.capital - spend, owned: [...s.owned, owned] });
+    const merge = mergeIntoHolding(s.owned, defId, def.category, incoming);
+    if (merge) {
+      set({
+        capital: s.capital - spend,
+        owned: s.owned.map((a) => (a.instanceId === merge.original.instanceId ? merge.merged : a)),
+      });
+    } else {
+      const newRecord: OwnedAsset = {
+        instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
+        defId,
+        purchasedMonth: s.month,
+        purchasePrice: spend,
+        currentValue: spend,
+      };
+      set({ capital: s.capital - spend, owned: [...s.owned, newRecord] });
+    }
     return true;
   },
 
@@ -219,17 +270,30 @@ export const useGame = create<GameState>()(
 
     if (want <= 0) return 0;
 
-    // Collapse into a single stacked record so the owned array stays small
-    // even at thousands of units. Keeps every tick O(unique asset types).
-    const newRecord: OwnedAsset = {
-      instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
-      defId,
-      purchasedMonth: s.month,
-      purchasePrice: def.price,
+    const spend = want * def.price;
+    const incoming = {
       currentValue: def.price,
+      purchasePrice: def.price,
       units: want,
+      purchasedMonth: s.month,
     };
-    set({ capital: s.capital - want * def.price, owned: [...s.owned, newRecord] });
+    const merge = mergeIntoHolding(s.owned, defId, def.category, incoming);
+    if (merge) {
+      set({
+        capital: s.capital - spend,
+        owned: s.owned.map((a) => (a.instanceId === merge.original.instanceId ? merge.merged : a)),
+      });
+    } else {
+      const newRecord: OwnedAsset = {
+        instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
+        defId,
+        purchasedMonth: s.month,
+        purchasePrice: def.price,
+        currentValue: def.price,
+        units: want,
+      };
+      set({ capital: s.capital - spend, owned: [...s.owned, newRecord] });
+    }
     return want;
   },
 
