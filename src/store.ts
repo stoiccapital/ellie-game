@@ -36,6 +36,7 @@ interface GameState {
   buyNeighbor: (plotIndex: number) => boolean;
   sellAsset: (instanceId: string) => void;
   redevelopAsset: (instanceId: string, newDefId: string) => boolean;
+  developEmptyPlot: (plotIndex: number, defId: string) => boolean;
   borrow: (amount: number) => boolean;
   repay: (amount: number) => boolean;
   sellHome: () => void;
@@ -356,6 +357,27 @@ export const useGame = create<GameState>()(
             }
           : a,
       ),
+    });
+    return true;
+  },
+
+  developEmptyPlot: (plotIndex, defId) => {
+    const s = get();
+    if (s.owned.some((a) => a.plotIndex === plotIndex)) return false;
+    const def = CATALOG.find((d) => d.id === defId);
+    if (!def) return false;
+    if (s.capital < def.price) return false;
+    const owned: OwnedAsset = {
+      instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
+      defId,
+      purchasedMonth: s.month,
+      purchasePrice: def.price,
+      currentValue: def.price,
+      plotIndex,
+    };
+    set({
+      capital: s.capital - def.price,
+      owned: [...s.owned, owned],
     });
     return true;
   },

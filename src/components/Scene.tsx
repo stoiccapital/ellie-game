@@ -63,6 +63,14 @@ type Item =
       footprint: number;
     }
   | {
+      kind: 'empty';
+      key: string;
+      gx: number;
+      gy: number;
+      plotIndex: number;
+      size: number;
+    }
+  | {
       kind: 'ambient';
       key: string;
       gx: number;
@@ -79,11 +87,13 @@ export function Scene() {
   const sellAsset = useGame((s) => s.sellAsset);
   const buyNeighbor = useGame((s) => s.buyNeighbor);
   const redevelopAsset = useGame((s) => s.redevelopAsset);
+  const developEmptyPlot = useGame((s) => s.developEmptyPlot);
   const capital = useGame((s) => s.capital);
   const clearedPlots = useGame((s) => s.clearedPlots);
   const [pendingSellId, setPendingSellId] = useState<string | null>(null);
   const [pendingBuyPlot, setPendingBuyPlot] = useState<number | null>(null);
   const [pendingRedevelopId, setPendingRedevelopId] = useState<string | null>(null);
+  const [pendingBuildPlot, setPendingBuildPlot] = useState<number | null>(null);
 
   const pendingRedevelop = useMemo(() => {
     if (!pendingRedevelopId) return null;
@@ -271,7 +281,18 @@ export function Scene() {
         });
         return;
       }
-      if (clearedSet.has(i)) return; // neighbor already bought out, plot stays empty
+      if (clearedSet.has(i)) {
+        // Neighbor bought out, nothing built here yet — buildable empty lot.
+        list.push({
+          kind: 'empty',
+          key: `empty_${i}`,
+          gx: cx,
+          gy: cy,
+          plotIndex: i,
+          size: plot.size,
+        });
+        return;
+      }
       const neighbor = NEIGHBORS[i];
       if (!neighbor) return;
       const def = CATALOG.find((d) => d.id === neighbor.defId);
@@ -483,12 +504,12 @@ export function Scene() {
                     : { duration: 0 }
                 }
                 whileHover={
-                  it.kind === 'owned' || it.kind === 'neighbor' || it.kind === 'ellie'
+                  it.kind === 'owned' || it.kind === 'neighbor' || it.kind === 'ellie' || it.kind === 'empty'
                     ? { scale: 1.08 }
                     : undefined
                 }
                 style={
-                  it.kind === 'owned' || it.kind === 'neighbor' || it.kind === 'ellie'
+                  it.kind === 'owned' || it.kind === 'neighbor' || it.kind === 'ellie' || it.kind === 'empty'
                     ? { cursor: 'pointer' }
                     : undefined
                 }
@@ -499,6 +520,8 @@ export function Scene() {
                     ? () => setPendingBuyPlot(it.plotIndex)
                     : it.kind === 'ellie'
                     ? () => setHomeModalOpen(true)
+                    : it.kind === 'empty'
+                    ? () => setPendingBuildPlot(it.plotIndex)
                     : undefined
                 }
               >
@@ -546,6 +569,33 @@ export function Scene() {
                       <AssetSprite category={it.category} color={it.color} size={0.95 * fpMul} />
                     </>
                   );
+                })() : it.kind === 'empty' ? (() => {
+                  // Buildable empty lot — show a dashed outline and a "+" badge.
+                  const fpMul = Math.sqrt(it.size);
+                  const r = 14 * fpMul;
+                  return (
+                    <>
+                      <circle
+                        cx={0}
+                        cy={0}
+                        r={r}
+                        fill="rgba(242, 214, 160, 0.08)"
+                        stroke="#f2d6a0"
+                        strokeWidth={0.8}
+                        strokeDasharray="3 2"
+                      />
+                      <text
+                        x={0}
+                        y={3}
+                        textAnchor="middle"
+                        fontSize={10 * fpMul}
+                        fill="#f2d6a0"
+                        fontWeight={700}
+                      >
+                        +
+                      </text>
+                    </>
+                  );
                 })() : (
                   // ambient
                   <>
@@ -585,10 +635,17 @@ export function Scene() {
                 </g>
               );
             }
-            // neighbor
+            if (it.kind === 'neighbor') {
+              return (
+                <g key={`lbl_${it.key}`} transform={`translate(${x}, ${y})`}>
+                  <LabelPill text={it.name} y={22} color="#c9cfd8" fontSize={8} />
+                </g>
+              );
+            }
+            // empty — show the lot size and a hint.
             return (
               <g key={`lbl_${it.key}`} transform={`translate(${x}, ${y})`}>
-                <LabelPill text={it.name} y={22} color="#c9cfd8" fontSize={8} />
+                <LabelPill text={`Empty ${it.size}×${it.size}`} y={22} color="#f2d6a0" fontSize={7} />
               </g>
             );
           })}
@@ -767,6 +824,104 @@ export function Scene() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Build on empty lot modal */}
+      <AnimatePresence>
+        {pendingBuildPlot !== null && (() => {
+          const plot = BUYABLE_PLOTS[pendingBuildPlot];
+          if (!plot) return null;
+          return (
+            <motion.div
+              key="build-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-sm z-10"
+              onClick={() => setPendingBuildPlot(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.94, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.94, y: 8 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-[420px] max-w-[92vw] max-h-[85vh] rounded-xl border border-line bg-panel shadow-2xl flex flex-col overflow-hidden"
+              >
+                <div className="px-4 pt-4 pb-3 border-b border-line">
+                  <div className="text-sm font-semibold text-ink">
+                    Build on empty lot
+                  </div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    Lot size <span className="num text-ink">{plot.size}×{plot.size}</span>. Pick a building that fits.
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {BUILDABLE_IDS.filter((bid) => {
+                    const d = CATALOG.find((c) => c.id === bid);
+                    return d && (d.footprint ?? 1) <= plot.size;
+                  }).map((bid) => {
+                    const def = CATALOG.find((d) => d.id === bid);
+                    if (!def) return null;
+                    const net = def.monthlyIncome - def.monthlyExpense;
+                    const affordable = capital >= def.price;
+                    return (
+                      <div
+                        key={bid}
+                        className="rounded-lg border border-line bg-panel2 p-3 flex gap-3 items-center"
+                      >
+                        <div className="w-14 h-14 flex-shrink-0 rounded-md bg-black/30 border border-line flex items-center justify-center">
+                          <svg viewBox="-40 -60 80 80" className="w-full h-full">
+                            <AssetSprite
+                              category={def.category}
+                              color={def.color}
+                              size={def.category === 'tower' ? 0.6 : 0.85}
+                              floors={def.floors}
+                              sprite={def.sprite}
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-ink truncate">{def.name}</div>
+                          <div className="text-[11px] text-muted mt-0.5 flex items-center gap-2">
+                            <span className="num text-ink">{moneyFull(def.price)}</span>
+                            <span className={net >= 0 ? 'num text-accent' : 'num text-bad'}>
+                              {net >= 0 ? '+' : ''}{money(net)} /mo
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          disabled={!affordable}
+                          onClick={() => {
+                            if (developEmptyPlot(pendingBuildPlot!, bid)) {
+                              setPendingBuildPlot(null);
+                            }
+                          }}
+                          className={`h-8 px-3 rounded-md text-[11px] font-semibold transition-colors ${
+                            !affordable
+                              ? 'bg-line text-muted cursor-not-allowed'
+                              : 'bg-accent text-black hover:bg-emerald-300'
+                          }`}
+                        >
+                          {affordable ? 'Build' : 'Short'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-4 py-3 border-t border-line flex justify-end">
+                  <button
+                    onClick={() => setPendingBuildPlot(null)}
+                    className="h-8 px-4 rounded-md text-xs font-semibold border border-line text-muted hover:text-ink hover:border-ink/40 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       <AnimatePresence>

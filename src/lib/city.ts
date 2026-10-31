@@ -160,13 +160,28 @@ export function isEllieCell(gx: number, gy: number) {
   );
 }
 
-// Backward-compat exports for existing callers.
-// Pull "major avenues" from the plot layout so the road-stripe layer still
-// renders decorative center lines. We approximate them as the midpoints of
-// the big outer street gutters.
+// Derive road center lines: every y that is entirely street gets a horizontal
+// road stripe; every x that is entirely street gets a vertical stripe. These
+// are the actual drivable rows/columns in the new layout.
+function computeFullStreetAxis(min: number, max: number, axis: 'x' | 'y'): number[] {
+  const result: number[] = [];
+  for (let v = min; v <= max; v++) {
+    let hit = false;
+    for (const p of PLOTS) {
+      if (axis === 'x') {
+        if (p.gx <= v && v < p.gx + p.size) { hit = true; break; }
+      } else {
+        if (p.gy <= v && v < p.gy + p.size) { hit = true; break; }
+      }
+    }
+    if (!hit) result.push(v);
+  }
+  return result;
+}
+export const STREETS_X: number[] = computeFullStreetAxis(X_MIN, X_MAX, 'x');
+export const STREETS_Y: number[] = computeFullStreetAxis(Y_MIN, Y_MAX, 'y');
+// Backward-compat alias (used by TrafficSim for stop-line computations).
 export const STREETS = [-6, 0, 6];
-export const STREETS_X: number[] = STREETS;
-export const STREETS_Y: number[] = STREETS;
 export const BLOCK_SIZE = 11;
 export const BLOCK_COUNT = 3;
 export const BLOCK_COUNT_X = 3;
