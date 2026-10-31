@@ -486,8 +486,10 @@ export const useGame = create<GameState>()(
     }),
     }),
     {
-      name: 'ellie-money-house:v1',
-      version: 1,
+      // Bump the version when the plot layout changes so old saves whose
+      // clearedPlots indices now point at a different plot layout get discarded.
+      name: 'ellie-money-house:v2',
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       // Persist only durable game state. Keep UI modal flags and current speed ephemeral.
       partialize: (s) => ({
