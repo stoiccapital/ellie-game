@@ -174,7 +174,21 @@ export function Scene() {
   }, []);
 
   // Per-plot pad: lot boundary + lighter sidewalk strip inside the plot edge.
+  // Lot interior is tinted by size so bigger lots read as commercial / landmark.
   const plotPads = useMemo(() => {
+    // Lot interior colors per size — bigger lots look paved (commercial feel).
+    const lotFill: Record<number, string> = {
+      1: '#3a3027', // residential dirt brown
+      2: '#3f362b', // slightly paved
+      3: '#3d3a38', // commercial gray-brown
+      4: '#38383c', // landmark asphalt
+    };
+    const sidewalkFill: Record<number, string> = {
+      1: '#5a4a3a',
+      2: '#6a5744',
+      3: '#787066',
+      4: '#8a8482',
+    };
     return PLOTS.map((p) => {
       const corners = [
         iso(p.gx - 0.5, p.gy - 0.5),
@@ -183,7 +197,6 @@ export function Scene() {
         iso(p.gx - 0.5, p.gy + p.size - 0.5),
       ];
       const pts = corners.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
-      // Slightly inset sidewalk ring (lighter)
       const inset = 0.08;
       const sw = [
         iso(p.gx - 0.5 + inset, p.gy - 0.5 + inset),
@@ -194,18 +207,8 @@ export function Scene() {
       const swPts = sw.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
       return (
         <g key={`pad_${p.gx}_${p.gy}`}>
-          {/* Outer sidewalk ring (lighter gray) */}
-          <polygon
-            points={pts}
-            fill="#5a4a3a"
-            opacity={0.85}
-          />
-          {/* Inner lot (darker brown) */}
-          <polygon
-            points={swPts}
-            fill="#3a3027"
-            opacity={0.9}
-          />
+          <polygon points={pts} fill={sidewalkFill[p.size]} opacity={0.9} />
+          <polygon points={swPts} fill={lotFill[p.size]} opacity={0.95} />
         </g>
       );
     });
