@@ -28,8 +28,13 @@ export interface OwnedAsset {
   instanceId: string;
   defId: string;
   purchasedMonth: number;
+  // Per-unit values. Multiply by `units` to get totals.
   purchasePrice: number;
   currentValue: number;
+  // Number of identical units stacked in this record. Defaults to 1.
+  // Lets bulk-buy collapse N identical businesses into a single record so the
+  // state array stays small even when the player owns thousands.
+  units?: number;
   // Plot index (0..14) for land-occupying assets; undefined for vehicles.
   plotIndex?: number;
 }

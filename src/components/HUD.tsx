@@ -29,13 +29,14 @@ export function HUD() {
     let v = 0;
     for (const a of owned) {
       const def = CATALOG.find((d) => d.id === a.defId)!;
+      const units = a.units ?? 1;
       if (def.category === 'etf') {
         const yieldPerDollar = def.monthlyIncome / def.price;
-        cf += a.currentValue * yieldPerDollar - def.monthlyExpense;
+        cf += a.currentValue * yieldPerDollar - def.monthlyExpense * units;
       } else {
-        cf += def.monthlyIncome - def.monthlyExpense;
+        cf += (def.monthlyIncome - def.monthlyExpense) * units;
       }
-      v += a.currentValue;
+      v += a.currentValue * units;
     }
     return { cashflow: cf, assetValue: v };
   }, [owned, job.salary]);

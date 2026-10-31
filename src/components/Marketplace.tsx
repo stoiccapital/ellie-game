@@ -30,7 +30,7 @@ export function Marketplace() {
       if (a.plotIndex !== undefined) p++;
       else {
         const def = CATALOG.find((c) => c.id === a.defId);
-        if (def?.category === 'vehicle') v++;
+        if (def?.category === 'vehicle') v += a.units ?? 1;
       }
     }
     return { plotTakerCount: p, vehicleCount: v };
@@ -144,7 +144,7 @@ export function Marketplace() {
                   <div className="flex items-center gap-3 mt-2 text-[11px] text-muted">
                     <span>Yield <span className="num text-ink">{pct(annualYield)}</span></span>
                     {tab === 'business' && def.maxOwned !== undefined && (() => {
-                      const ownedOfType = owned.filter((a) => a.defId === def.id).length;
+                      const ownedOfType = owned.reduce((n, a) => a.defId === def.id ? n + (a.units ?? 1) : n, 0);
                       return (
                         <span>
                           Owned <span className={cn('num', ownedOfType >= def.maxOwned ? 'text-bad' : 'text-ink')}>
@@ -189,7 +189,7 @@ export function Marketplace() {
                     </>
                   ) : tab === 'business' ? (
                     (() => {
-                      const ownedOfType = owned.filter((a) => a.defId === def.id).length;
+                      const ownedOfType = owned.reduce((n, a) => a.defId === def.id ? n + (a.units ?? 1) : n, 0);
                       const remainingCap = def.maxOwned !== undefined
                         ? Math.max(0, def.maxOwned - ownedOfType)
                         : Infinity;

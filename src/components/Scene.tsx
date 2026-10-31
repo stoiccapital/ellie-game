@@ -251,12 +251,19 @@ export function Scene() {
     const ownedVehicles = owned.flatMap((a) => {
       const def = CATALOG.find((d) => d.id === a.defId);
       if (!def || def.category !== 'vehicle') return [];
-      return [{
-        spec: ownedVehicleSpec(a.instanceId, def.color),
-        id: a.instanceId,
-        name: def.name,
-        owned: true as const,
-      }];
+      const units = a.units ?? 1;
+      // One rendered car per unit, each with a deterministic spec from a unique id.
+      return Array.from({ length: units }, (_, i) => {
+        const id = units > 1 ? `${a.instanceId}#${i}` : a.instanceId;
+        return {
+          spec: ownedVehicleSpec(id, def.color),
+          id,
+          // Shared sell handler needs the original stack id, not the per-unit suffix.
+          sellStackId: a.instanceId,
+          name: def.name,
+          owned: true as const,
+        };
+      });
     });
     return [...base, ...ownedVehicles];
   }, [owned]);
@@ -361,7 +368,10 @@ export function Scene() {
         )}
 
         {/* Traffic simulation — vehicles obey lights, drawn behind houses so buildings occlude them */}
-        <TrafficSim specs={vehicles} onOwnedClick={(id) => setPendingSellId(id)} />
+        <TrafficSim
+          specs={vehicles}
+          onOwnedClick={(_id, stackId) => setPendingSellId(stackId ?? _id)}
+        />
 
         {/* All items sorted back-to-front */}
         <AnimatePresence>
@@ -948,8 +958,8 @@ function TrafficSim({
   specs,
   onOwnedClick,
 }: {
-  specs: Array<{ spec: VehicleSpec; id: string; name?: string; owned: boolean }>;
-  onOwnedClick: (id: string) => void;
+  specs: Array<{ spec: VehicleSpec; id: string; name?: string; owned: boolean; sellStackId?: string }>;
+  onOwnedClick: (id: string, sellStackId?: string) => void;
 }) {
   const vehicleRefs = useRef(new Map<string, SVGGElement | null>());
   const lightRefs = useRef(new Map<string, SVGCircleElement | null>());
@@ -1026,14 +1036,14 @@ function TrafficSim({
         )}
       </g>
       <g>
-        {specs.map(({ spec, id, name, owned }) => (
+        {specs.map(({ spec, id, name, owned, sellStackId }) => (
           <g
             key={id}
             ref={(el) => {
               if (el) vehicleRefs.current.set(id, el);
               else vehicleRefs.current.delete(id);
             }}
-            onClick={owned ? () => onOwnedClick(id) : undefined}
+            onClick={owned ? () => onOwnedClick(id, sellStackId) : undefined}
             style={owned ? { cursor: 'pointer' } : undefined}
           >
             <IsoVehicle kind={spec.kind} dir={dirOf(spec)} color={spec.color} color2={spec.color2} />

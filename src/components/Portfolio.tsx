@@ -13,10 +13,12 @@ export function Portfolio() {
   const rows = useMemo(() => {
     return owned.map((asset) => {
       const def = CATALOG.find((d) => d.id === asset.defId)!;
-      const net = def.monthlyIncome - def.monthlyExpense;
-      const gain = asset.currentValue - asset.purchasePrice;
+      const units = asset.units ?? 1;
+      const net = (def.monthlyIncome - def.monthlyExpense) * units;
+      const gain = (asset.currentValue - asset.purchasePrice) * units;
+      const totalValue = asset.currentValue * units;
       const held = month - asset.purchasedMonth;
-      return { asset, def, net, gain, held };
+      return { asset, def, net, gain, held, units, totalValue };
     });
   }, [owned, month]);
 
@@ -33,7 +35,7 @@ export function Portfolio() {
           </div>
         )}
         <AnimatePresence>
-          {rows.map(({ asset, def, net, gain, held }) => (
+          {rows.map(({ asset, def, net, gain, held, units, totalValue }) => (
             <motion.div
               key={asset.instanceId}
               layout
@@ -48,9 +50,14 @@ export function Portfolio() {
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-ink truncate">{def.name}</div>
+                <div className="text-xs font-semibold text-ink truncate">
+                  {def.name}
+                  {units > 1 && (
+                    <span className="ml-1.5 num text-[10px] text-muted">×{units}</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-[10px] text-muted">
-                  <span className="num text-ink">{money(asset.currentValue)}</span>
+                  <span className="num text-ink">{money(totalValue)}</span>
                   <span className={gain >= 0 ? 'text-accent' : 'text-bad'}>
                     {gain >= 0 ? '+' : ''}{money(gain)}
                   </span>

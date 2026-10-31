@@ -76,13 +76,14 @@ export const useGame = create<GameState>()(
     let capital = s.capital;
     const newOwned: OwnedAsset[] = s.owned.map((asset) => {
       const def = CATALOG.find((d) => d.id === asset.defId)!;
+      const units = asset.units ?? 1;
       // Dividend / cashflow — scaled by currentValue for ETFs so yield tracks holdings,
-      // flat per-unit for everything else.
+      // flat per-unit (× units) for everything else.
       if (def.category === 'etf') {
         const yieldPerDollar = def.monthlyIncome / def.price;
-        capital += asset.currentValue * yieldPerDollar - def.monthlyExpense;
+        capital += asset.currentValue * yieldPerDollar - def.monthlyExpense * units;
       } else {
-        capital += def.monthlyIncome - def.monthlyExpense;
+        capital += (def.monthlyIncome - def.monthlyExpense) * units;
       }
 
       const appRate = def.appreciationYearly > 0 ? monthlyRate(def.appreciationYearly) : 0;
@@ -157,7 +158,7 @@ export const useGame = create<GameState>()(
 
     // Per-type ownership cap (e.g., 1 freelance studio since it's solo work).
     if (def.maxOwned !== undefined) {
-      const ownedOfType = s.owned.filter((a) => a.defId === defId).length;
+      const ownedOfType = s.owned.reduce((n, a) => a.defId === defId ? n + (a.units ?? 1) : n, 0);
       if (ownedOfType >= def.maxOwned) return false;
     }
 
@@ -195,34 +196,34 @@ export const useGame = create<GameState>()(
     // Vehicle parking cap: 1 base + 1 per owned plot.
     if (def.category === 'vehicle') {
       const plotTakers = s.owned.filter((a) => a.plotIndex !== undefined).length;
-      const vehicles = s.owned.filter((a) => {
+      const vehicles = s.owned.reduce((n, a) => {
         const d = CATALOG.find((c) => c.id === a.defId);
-        return d?.category === 'vehicle';
-      }).length;
+        return d?.category === 'vehicle' ? n + (a.units ?? 1) : n;
+      }, 0);
       const parkingLeft = Math.max(0, 1 + plotTakers - vehicles);
       want = Math.min(want, parkingLeft);
     }
 
     // Per-type ownership cap.
     if (def.maxOwned !== undefined) {
-      const ownedOfType = s.owned.filter((a) => a.defId === defId).length;
+      const ownedOfType = s.owned.reduce((n, a) => a.defId === defId ? n + (a.units ?? 1) : n, 0);
       const remaining = Math.max(0, def.maxOwned - ownedOfType);
       want = Math.min(want, remaining);
     }
 
     if (want <= 0) return 0;
 
-    const newOwned: OwnedAsset[] = [];
-    for (let i = 0; i < want; i++) {
-      newOwned.push({
-        instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}_${i}`,
-        defId,
-        purchasedMonth: s.month,
-        purchasePrice: def.price,
-        currentValue: def.price,
-      });
-    }
-    set({ capital: s.capital - want * def.price, owned: [...s.owned, ...newOwned] });
+    // Collapse into a single stacked record so the owned array stays small
+    // even at thousands of units. Keeps every tick O(unique asset types).
+    const newRecord: OwnedAsset = {
+      instanceId: `${defId}_${s.month}_${Math.random().toString(36).slice(2, 7)}`,
+      defId,
+      purchasedMonth: s.month,
+      purchasePrice: def.price,
+      currentValue: def.price,
+      units: want,
+    };
+    set({ capital: s.capital - want * def.price, owned: [...s.owned, newRecord] });
     return want;
   },
 
@@ -257,8 +258,9 @@ export const useGame = create<GameState>()(
     const s = get();
     const asset = s.owned.find((a) => a.instanceId === instanceId);
     if (!asset) return;
+    const units = asset.units ?? 1;
     set({
-      capital: s.capital + asset.currentValue,
+      capital: s.capital + asset.currentValue * units,
       owned: s.owned.filter((a) => a.instanceId !== instanceId),
     });
   },
