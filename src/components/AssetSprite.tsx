@@ -22,6 +22,9 @@ export function AssetSprite({ category, color, size = 1, floors, sprite }: Props
       case 'hospital': return <HospitalSprite color={color} scale={s} />;
       case 'gym': return <GymSprite color={color} scale={s} />;
       case 'cinema': return <CinemaSprite color={color} scale={s} />;
+      case 'villa': return <VillaSprite color={color} scale={s} />;
+      case 'mansion': return <MansionSprite color={color} scale={s} />;
+      case 'estate': return <EstateSprite color={color} scale={s} />;
     }
   }
   switch (category) {
@@ -611,6 +614,468 @@ function CinemaSprite({ color, scale }: { color: string; scale: number }) {
           cy={-bd * 0.6 - h * 0.9 + i * 0.5}
           r={0.9 * s}
           fill="#fff7c2"
+        />
+      ))}
+    </g>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Luxury home sprites — composed from multiple iso masses with trim, pools,
+// gardens, columns, fountains. All centered at (0, 0) ground.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Parametric point on an iso wall. u=0 at the back corner, u=1 at the front
+// corner; v=0 at ground, v=1 at the top of the wall.
+function westPt(bw: number, bd: number, h: number, u: number, v: number): [number, number] {
+  return [-bw * (1 - u), -bd + 2 * bd * u - h * v];
+}
+function eastPt(bw: number, bd: number, h: number, u: number, v: number): [number, number] {
+  return [bw * u, bd - 2 * bd * u - h * v];
+}
+function toPts(pts: Array<[number, number]>) {
+  return pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+}
+
+// A single rectangular iso mass centered at (ox, oy) with walls, trim, and
+// optional pitched roof. Returns a <g>.
+function IsoMass({
+  ox = 0,
+  oy = 0,
+  bw,
+  bd,
+  h,
+  color,
+  roofColor,
+  roofPitch = 0,
+  trim,
+  windowRows = 1,
+  windowCols = 2,
+  windowColor = '#ffe39a',
+  windowOpacity = 0.85,
+}: {
+  ox?: number;
+  oy?: number;
+  bw: number;
+  bd: number;
+  h: number;
+  color: string;
+  roofColor?: string;
+  roofPitch?: number;
+  trim?: string;
+  windowRows?: number;
+  windowCols?: number;
+  windowColor?: string;
+  windowOpacity?: number;
+}) {
+  const west = shade(color, -0.16);
+  const east = shade(color, -0.06);
+  const roofC = roofColor ?? shade(color, -0.25);
+  const roofTop = shade(roofC, 0.12);
+  const windows: React.ReactNode[] = [];
+  for (let r = 0; r < windowRows; r++) {
+    const vTop = 0.25 + ((r + 1) / (windowRows + 1)) * 0.6;
+    const vBot = vTop - (0.5 / windowRows) * 0.9;
+    for (let c = 0; c < windowCols; c++) {
+      const uMid = (c + 1) / (windowCols + 1);
+      const uHalf = 0.5 / (windowCols + 1) * 0.5;
+      const uL = uMid - uHalf;
+      const uR = uMid + uHalf;
+      windows.push(
+        <polygon
+          key={`w_w_${r}_${c}`}
+          points={toPts([
+            westPt(bw, bd, h, uL, vBot),
+            westPt(bw, bd, h, uR, vBot),
+            westPt(bw, bd, h, uR, vTop),
+            westPt(bw, bd, h, uL, vTop),
+          ])}
+          fill={windowColor}
+          opacity={windowOpacity}
+        />,
+        <polygon
+          key={`w_e_${r}_${c}`}
+          points={toPts([
+            eastPt(bw, bd, h, uL, vBot),
+            eastPt(bw, bd, h, uR, vBot),
+            eastPt(bw, bd, h, uR, vTop),
+            eastPt(bw, bd, h, uL, vTop),
+          ])}
+          fill={windowColor}
+          opacity={windowOpacity}
+        />,
+      );
+    }
+  }
+  return (
+    <g transform={`translate(${ox}, ${oy})`}>
+      <polygon
+        points={`${-bw},${-bd} 0,${bd} 0,${bd - h} ${-bw},${-bd - h}`}
+        fill={west}
+      />
+      <polygon
+        points={`0,${bd} ${bw},${-bd} ${bw},${-bd - h} 0,${bd - h}`}
+        fill={east}
+      />
+      {trim && (
+        <>
+          <line x1={-bw} y1={-bd - h * 0.92} x2={0} y2={bd - h * 0.92} stroke={trim} strokeWidth={0.6} />
+          <line x1={0} y1={bd - h * 0.92} x2={bw} y2={-bd - h * 0.92} stroke={trim} strokeWidth={0.6} />
+        </>
+      )}
+      {windows}
+      {roofPitch > 0 ? (
+        <>
+          <polygon
+            points={`${-bw},${-bd - h} 0,${-2 * bd - h - roofPitch} ${bw},${-bd - h} 0,${bd - h}`}
+            fill={roofTop}
+          />
+          <polygon
+            points={`${-bw},${-bd - h} 0,${-2 * bd - h - roofPitch} 0,${bd - h}`}
+            fill={roofC}
+          />
+        </>
+      ) : (
+        <polygon
+          points={`0,${-bd * 2 - h} ${-bw},${-bd - h} 0,${bd - h} ${bw},${-bd - h}`}
+          fill={shade(color, 0.05)}
+        />
+      )}
+    </g>
+  );
+}
+
+// Shimmering iso pool with a lighter inner highlight.
+function Pool({ cx, cy, w, d, color = '#5aa0c0' }: { cx: number; cy: number; w: number; d: number; color?: string }) {
+  const inner = shade(color, 0.22);
+  return (
+    <g>
+      <polygon
+        points={`${cx},${cy - d} ${cx + w},${cy} ${cx},${cy + d} ${cx - w},${cy}`}
+        fill={color}
+        opacity={0.9}
+      />
+      <polygon
+        points={`${cx},${cy - d + 1.4} ${cx + w - 2.6},${cy} ${cx},${cy + d - 1.4} ${cx - w + 2.6},${cy}`}
+        fill={inner}
+        opacity={0.85}
+      />
+      {/* diagonal shimmer stripes */}
+      <polygon
+        points={`${cx - w * 0.4},${cy - d * 0.1} ${cx + w * 0.1},${cy + d * 0.3} ${cx + w * 0.05},${cy + d * 0.4} ${cx - w * 0.5},${cy}`}
+        fill="#ffffff"
+        opacity={0.22}
+      />
+    </g>
+  );
+}
+
+// Simple palm — slim trunk + fronds.
+function Palm({ x, y, scale: s }: { x: number; y: number; scale: number }) {
+  const h = 10 * s;
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      <rect x={-0.8} y={-h} width={1.6} height={h} fill="#5a3b22" />
+      <ellipse cx={0} cy={-h} rx={5 * s} ry={1.6 * s} fill="#397a3f" transform={`rotate(10 0 ${-h})`} />
+      <ellipse cx={0} cy={-h} rx={5 * s} ry={1.6 * s} fill="#2f6b36" transform={`rotate(-15 0 ${-h})`} />
+      <ellipse cx={0} cy={-h} rx={4 * s} ry={1.4 * s} fill="#4a8a4a" transform={`rotate(40 0 ${-h})`} />
+      <ellipse cx={0} cy={-h} rx={4 * s} ry={1.4 * s} fill="#397a3f" transform={`rotate(-45 0 ${-h})`} />
+    </g>
+  );
+}
+
+// Decorative stone/wood column drawn as a thin iso prism with a cap.
+function Column({ x, y, h, scale: s, color = '#f2e1b7' }: { x: number; y: number; h: number; scale: number; color?: string }) {
+  const w = 1.4 * s;
+  return (
+    <g transform={`translate(${x}, ${y})`}>
+      <rect x={-w} y={-h} width={w * 2} height={h} fill={color} />
+      <rect x={-w - 0.4} y={-h - 1.2} width={w * 2 + 0.8} height={1.2} fill={shade(color, 0.1)} />
+      <rect x={-w - 0.4} y={-1.2} width={w * 2 + 0.8} height={1.4} fill={shade(color, -0.2)} />
+    </g>
+  );
+}
+
+function Hedge({ x, y, w, scale: s, color = '#3f6a3f' }: { x: number; y: number; w: number; scale: number; color?: string }) {
+  const r = 1.6 * s;
+  const n = Math.max(2, Math.round(w / (r * 1.4)));
+  const circles: React.ReactNode[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    circles.push(
+      <circle
+        key={i}
+        cx={-w / 2 + t * w}
+        cy={-r * 0.4}
+        r={r}
+        fill={i % 2 === 0 ? color : shade(color, 0.08)}
+      />,
+    );
+  }
+  return <g transform={`translate(${x}, ${y})`}>{circles}</g>;
+}
+
+function Fountain({ cx, cy, scale: s }: { cx: number; cy: number; scale: number }) {
+  return (
+    <g transform={`translate(${cx}, ${cy})`}>
+      <ellipse cx={0} cy={0} rx={6 * s} ry={2.4 * s} fill="#4e8aaa" opacity={0.85} />
+      <ellipse cx={0} cy={0} rx={4.5 * s} ry={1.6 * s} fill="#8ec7df" />
+      <ellipse cx={0} cy={-2 * s} rx={1.4 * s} ry={0.5 * s} fill="#f2e1b7" />
+      {/* Water jet */}
+      <rect x={-0.4} y={-7 * s} width={0.8} height={5 * s} fill="#bfe1f0" opacity={0.9} />
+      <ellipse cx={0} cy={-7 * s} rx={2.4 * s} ry={0.8 * s} fill="#bfe1f0" opacity={0.75} />
+    </g>
+  );
+}
+
+function VillaSprite({ color, scale }: { color: string; scale: number }) {
+  const s = scale;
+  const bw = 32 * s;
+  const bd = 16 * s;
+  const h = 22 * s;
+  const roofC = '#8a3a2a'; // terracotta
+  const trim = '#f2d6a0';
+  return (
+    <g>
+      {/* Garden slab under the whole villa */}
+      <polygon
+        points={`0,${-2 * bd - 2} ${bw + 10 * s},${-2} 0,${2 * bd + 6 * s} ${-bw - 10 * s},${-2}`}
+        fill="#3f6a3f"
+        opacity={0.75}
+      />
+      {/* Pool in front */}
+      <Pool cx={0} cy={bd + 8 * s} w={bw * 0.75} d={5 * s} color="#5aa0c0" />
+      {/* Hedge ring at front edge */}
+      <Hedge x={-bw * 0.5} y={bd + 2 * s} w={6 * s} scale={s} />
+      <Hedge x={bw * 0.5} y={bd + 2 * s} w={6 * s} scale={s} />
+      {/* Main house */}
+      <IsoMass
+        bw={bw}
+        bd={bd}
+        h={h}
+        color={color}
+        roofColor={roofC}
+        roofPitch={14 * s}
+        trim={trim}
+        windowRows={1}
+        windowCols={3}
+      />
+      {/* Front porch columns */}
+      <Column x={-bw * 0.3} y={bd - 1} h={h * 0.55} scale={s} color="#f6e5bc" />
+      <Column x={bw * 0.3} y={bd - 1} h={h * 0.55} scale={s} color="#f6e5bc" />
+      {/* Palms at corners */}
+      <Palm x={-bw - 6 * s} y={-bd - 1} scale={s} />
+      <Palm x={bw + 6 * s} y={-bd - 1} scale={s} />
+    </g>
+  );
+}
+
+function MansionSprite({ color, scale }: { color: string; scale: number }) {
+  const s = scale;
+  const centerBw = 20 * s;
+  const centerBd = 13 * s;
+  const centerH = 28 * s;
+  const wingBw = 14 * s;
+  const wingBd = 10 * s;
+  const wingH = 22 * s;
+  const roofC = '#5a3025';
+  const trim = '#f2d6a0';
+  const wingOffsetX = 24 * s; // offset the wings away from center in iso x
+  return (
+    <g>
+      {/* Formal garden slab */}
+      <polygon
+        points={`0,${-centerBd * 2 - 3 * s} ${centerBw + 32 * s},${-2} 0,${centerBd * 2 + 10 * s} ${-centerBw - 32 * s},${-2}`}
+        fill="#3f6a3f"
+        opacity={0.8}
+      />
+      {/* Large pool in front */}
+      <Pool cx={0} cy={centerBd + 11 * s} w={centerBw * 1.1} d={6 * s} color="#4a98b8" />
+      {/* Hedge border */}
+      <Hedge x={0} y={centerBd + 4 * s} w={centerBw * 1.4} scale={s} />
+
+      {/* West wing (left/back) */}
+      <IsoMass
+        ox={-wingOffsetX}
+        oy={6 * s}
+        bw={wingBw}
+        bd={wingBd}
+        h={wingH}
+        color={shade(color, -0.04)}
+        roofColor={roofC}
+        roofPitch={9 * s}
+        trim={trim}
+        windowRows={2}
+        windowCols={2}
+      />
+      {/* East wing (right/front) */}
+      <IsoMass
+        ox={wingOffsetX}
+        oy={6 * s}
+        bw={wingBw}
+        bd={wingBd}
+        h={wingH}
+        color={shade(color, -0.04)}
+        roofColor={roofC}
+        roofPitch={9 * s}
+        trim={trim}
+        windowRows={2}
+        windowCols={2}
+      />
+      {/* Central hall (tallest, drawn last so it reads as front) */}
+      <IsoMass
+        bw={centerBw}
+        bd={centerBd}
+        h={centerH}
+        color={color}
+        roofColor={roofC}
+        roofPitch={14 * s}
+        trim={trim}
+        windowRows={2}
+        windowCols={3}
+      />
+      {/* Grand entrance portico — 4 columns across the front */}
+      <Column x={-centerBw * 0.6} y={centerBd - 1} h={centerH * 0.6} scale={s} color="#f6e5bc" />
+      <Column x={-centerBw * 0.2} y={centerBd - 1} h={centerH * 0.6} scale={s} color="#f6e5bc" />
+      <Column x={centerBw * 0.2} y={centerBd - 1} h={centerH * 0.6} scale={s} color="#f6e5bc" />
+      <Column x={centerBw * 0.6} y={centerBd - 1} h={centerH * 0.6} scale={s} color="#f6e5bc" />
+      {/* Pediment above portico */}
+      <polygon
+        points={`${-centerBw * 0.7},${-centerH * 0.6 + centerBd} ${centerBw * 0.7},${-centerH * 0.6 + centerBd} 0,${-centerH * 0.72 + centerBd}`}
+        fill={trim}
+      />
+      {/* Palms at outer corners */}
+      <Palm x={-wingOffsetX - wingBw - 4 * s} y={-wingBd - 1} scale={s * 0.9} />
+      <Palm x={wingOffsetX + wingBw + 4 * s} y={-wingBd - 1} scale={s * 0.9} />
+    </g>
+  );
+}
+
+function EstateSprite({ color, scale }: { color: string; scale: number }) {
+  const s = scale;
+  const centerBw = 18 * s;
+  const centerBd = 12 * s;
+  const centerH = 38 * s;
+  const wingBw = 16 * s;
+  const wingBd = 11 * s;
+  const wingH = 26 * s;
+  const towerBw = 7 * s;
+  const towerBd = 5 * s;
+  const towerH = 20 * s;
+  const roofC = shade(color, -0.4);
+  const gold = '#f2d6a0';
+  return (
+    <g>
+      {/* Lawn + formal garden base */}
+      <polygon
+        points={`0,${-centerBd * 2 - 4 * s} ${centerBw + 46 * s},${-2} 0,${centerBd * 2 + 16 * s} ${-centerBw - 46 * s},${-2}`}
+        fill="#466f46"
+        opacity={0.85}
+      />
+      <polygon
+        points={`0,${-centerBd * 2 - 1} ${centerBw + 38 * s},${-2} 0,${centerBd * 2 + 10 * s} ${-centerBw - 38 * s},${-2}`}
+        fill="#5a8a5a"
+        opacity={0.75}
+      />
+      {/* Reflecting pool at the very front */}
+      <Pool cx={0} cy={centerBd + 15 * s} w={centerBw * 1.6} d={6 * s} color="#3d8db0" />
+      {/* Fountain centerpiece between pool and house */}
+      <Fountain cx={0} cy={centerBd + 7 * s} scale={s * 1.1} />
+      {/* Hedge rings */}
+      <Hedge x={-centerBw * 1.1} y={centerBd + 2 * s} w={9 * s} scale={s} />
+      <Hedge x={centerBw * 1.1} y={centerBd + 2 * s} w={9 * s} scale={s} />
+
+      {/* West wing */}
+      <IsoMass
+        ox={-32 * s}
+        oy={6 * s}
+        bw={wingBw}
+        bd={wingBd}
+        h={wingH}
+        color={shade(color, -0.06)}
+        roofColor={roofC}
+        roofPitch={8 * s}
+        trim={gold}
+        windowRows={3}
+        windowCols={2}
+      />
+      {/* East wing */}
+      <IsoMass
+        ox={32 * s}
+        oy={6 * s}
+        bw={wingBw}
+        bd={wingBd}
+        h={wingH}
+        color={shade(color, -0.06)}
+        roofColor={roofC}
+        roofPitch={8 * s}
+        trim={gold}
+        windowRows={3}
+        windowCols={2}
+      />
+      {/* Central hall */}
+      <IsoMass
+        bw={centerBw}
+        bd={centerBd}
+        h={centerH}
+        color={color}
+        roofColor={roofC}
+        roofPitch={0}
+        trim={gold}
+        windowRows={3}
+        windowCols={3}
+      />
+      {/* Grand portico — 6 columns */}
+      {[-0.72, -0.44, -0.14, 0.14, 0.44, 0.72].map((t, i) => (
+        <Column
+          key={i}
+          x={centerBw * t}
+          y={centerBd - 1}
+          h={centerH * 0.55}
+          scale={s}
+          color="#faecc1"
+        />
+      ))}
+      {/* Pediment with gold trim */}
+      <polygon
+        points={`${-centerBw * 0.8},${-centerH * 0.55 + centerBd} ${centerBw * 0.8},${-centerH * 0.55 + centerBd} 0,${-centerH * 0.72 + centerBd}`}
+        fill="#f8e7bb"
+      />
+      <polygon
+        points={`${-centerBw * 0.8},${-centerH * 0.55 + centerBd} ${centerBw * 0.8},${-centerH * 0.55 + centerBd} 0,${-centerH * 0.72 + centerBd}`}
+        fill="none"
+        stroke={gold}
+        strokeWidth={0.6}
+      />
+      {/* Central crowning tower on top of the main hall */}
+      <g transform={`translate(0, ${-centerH + centerBd * 0.4})`}>
+        <IsoMass
+          bw={towerBw}
+          bd={towerBd}
+          h={towerH}
+          color={shade(color, 0.08)}
+          roofColor={roofC}
+          roofPitch={10 * s}
+          trim={gold}
+          windowRows={2}
+          windowCols={1}
+        />
+        {/* Golden finial on top */}
+        <circle cx={0} cy={-towerH - 7 * s - towerBd + 1} r={1.6 * s} fill={gold} />
+        <rect x={-0.5} y={-towerH - 11 * s - towerBd + 1} width={1} height={4 * s} fill={gold} />
+      </g>
+      {/* Palms at outer corners */}
+      <Palm x={-54 * s} y={-wingBd - 1} scale={s * 1.1} />
+      <Palm x={54 * s} y={-wingBd - 1} scale={s * 1.1} />
+      {/* Sparkles — static gold specks for prestige */}
+      {[-20, -8, 7, 22].map((xo, i) => (
+        <circle
+          key={i}
+          cx={xo * s}
+          cy={-centerH * 0.78}
+          r={0.6 * s}
+          fill={gold}
+          opacity={0.85}
         />
       ))}
     </g>

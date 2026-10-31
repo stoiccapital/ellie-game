@@ -761,7 +761,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 3_500,
     appreciationYearly: 0.035,
     description: 'Private garden, pool, prestige address.',
-    visual: { category: 'commercial', sprite: 'hotel', color: '#d9b672', size: 1.2 },
+    visual: { category: 'commercial', sprite: 'villa', color: '#f0e6cf', size: 1.15 },
   },
   {
     id: 'mansion',
@@ -770,7 +770,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 9_500,
     appreciationYearly: 0.04,
     description: 'Multi-wing estate with staff quarters.',
-    visual: { category: 'commercial', sprite: 'hotel', color: '#f2c15a', size: 1.55 },
+    visual: { category: 'commercial', sprite: 'mansion', color: '#efe3c2', size: 1.1 },
   },
   {
     id: 'estate',
@@ -779,7 +779,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 28_000,
     appreciationYearly: 0.04,
     description: 'Trophy property. Private cinema, vineyard, helipad.',
-    visual: { category: 'tower', color: '#f2d6a0', size: 1.3, floors: 6 },
+    visual: { category: 'commercial', sprite: 'estate', color: '#f5ead1', size: 1.0 },
   },
 ];
 export const STARTING_HOME_TIER_ID = 'starter';

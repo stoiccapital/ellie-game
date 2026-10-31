@@ -398,38 +398,13 @@ export function Scene() {
           />
         )}
 
-        {/* Upgrade burst: expanding ring + flash each time the home tier changes. */}
+        {/* Upgrade celebration — concentric gold rings + sparkle shower. */}
         {upgradePulse > 0 && (
-          <motion.g
+          <UpgradeBurst
             key={`pulse_${upgradePulse}`}
-            style={{
-              transformOrigin: `${iso(ELLIE_GX, ELLIE_GY).x}px ${iso(ELLIE_GX, ELLIE_GY).y}px`,
-              transformBox: 'fill-box',
-            } as React.CSSProperties}
-            initial={{ opacity: 0.9, scale: 0.2 }}
-            animate={{ opacity: 0, scale: 2.4 }}
-            transition={{ duration: 1.1, ease: 'easeOut' }}
-            pointerEvents="none"
-          >
-            <ellipse
-              cx={iso(ELLIE_GX, ELLIE_GY).x}
-              cy={iso(ELLIE_GX, ELLIE_GY).y}
-              rx={60}
-              ry={30}
-              fill="none"
-              stroke="#f2d6a0"
-              strokeWidth={1.5}
-              opacity={0.8}
-            />
-            <ellipse
-              cx={iso(ELLIE_GX, ELLIE_GY).x}
-              cy={iso(ELLIE_GX, ELLIE_GY).y}
-              rx={40}
-              ry={20}
-              fill="#f2d6a0"
-              opacity={0.25}
-            />
-          </motion.g>
+            x={iso(ELLIE_GX, ELLIE_GY).x}
+            y={iso(ELLIE_GX, ELLIE_GY).y}
+          />
         )}
 
         {/* Traffic simulation — vehicles obey lights, drawn behind houses so buildings occlude them */}
@@ -1355,4 +1330,84 @@ function shade(hex: string, amount: number) {
   const b = parseInt(h.substring(4, 6), 16);
   const adj = (c: number) => Math.max(0, Math.min(255, Math.round(c + 255 * amount)));
   return `rgb(${adj(r)}, ${adj(g)}, ${adj(b)})`;
+}
+
+function UpgradeBurst({ x, y }: { x: number; y: number }) {
+  // Three concentric iso rings pulsing outward.
+  const rings = [
+    { rx0: 42, ry0: 20, rx1: 180, ry1: 90, delay: 0.0, dur: 1.1, color: '#f2d6a0', stroke: 2.0 },
+    { rx0: 36, ry0: 17, rx1: 150, ry1: 75, delay: 0.12, dur: 1.0, color: '#ffd27a', stroke: 1.4 },
+    { rx0: 30, ry0: 14, rx1: 120, ry1: 60, delay: 0.24, dur: 0.95, color: '#ffffff', stroke: 1.0 },
+  ];
+  // Gold sparkle shower rising from the plot.
+  const sparkles = Array.from({ length: 18 }, (_, i) => {
+    const angle = (i / 18) * Math.PI * 2;
+    const dist = 60 + Math.random() * 40;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist * 0.45 - 20 - Math.random() * 25;
+    const size = 1.1 + Math.random() * 1.2;
+    const delay = Math.random() * 0.35;
+    return { dx, dy, size, delay };
+  });
+  return (
+    <g pointerEvents="none">
+      {/* Soft base flash */}
+      <motion.ellipse
+        cx={x}
+        cy={y}
+        rx={100}
+        ry={50}
+        fill="#f2d6a0"
+        initial={{ opacity: 0.55 }}
+        animate={{ opacity: 0 }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
+      />
+      {/* Expanding rings */}
+      {rings.map((r, i) => (
+        <motion.ellipse
+          key={i}
+          cx={x}
+          cy={y}
+          fill="none"
+          stroke={r.color}
+          strokeWidth={r.stroke}
+          initial={{ opacity: 0.95, rx: r.rx0, ry: r.ry0 }}
+          animate={{ opacity: 0, rx: r.rx1, ry: r.ry1 }}
+          transition={{ duration: r.dur, delay: r.delay, ease: 'easeOut' }}
+        />
+      ))}
+      {/* Rising gold sparkles */}
+      {sparkles.map((s, i) => (
+        <motion.circle
+          key={i}
+          cx={x}
+          cy={y}
+          r={s.size}
+          fill="#ffe39a"
+          initial={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
+          animate={{ opacity: [0, 1, 0], x: s.dx, y: s.dy, scale: 1 }}
+          transition={{ duration: 1.2, delay: s.delay, ease: 'easeOut' }}
+        />
+      ))}
+      {/* Central starburst */}
+      <motion.g
+        initial={{ opacity: 0, scale: 0.3 }}
+        animate={{ opacity: [0, 1, 0], scale: 1.6 }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
+      >
+        {[0, 45, 90, 135].map((a) => (
+          <line
+            key={a}
+            x1={x}
+            y1={y}
+            x2={x + Math.cos((a * Math.PI) / 180) * 18}
+            y2={y + Math.sin((a * Math.PI) / 180) * 9}
+            stroke="#ffffff"
+            strokeWidth={1.6}
+            opacity={0.9}
+          />
+        ))}
+      </motion.g>
+    </g>
+  );
 }
