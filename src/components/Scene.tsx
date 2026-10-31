@@ -153,15 +153,17 @@ export function Scene() {
       for (let gy = Y_MIN; gy <= Y_MAX; gy++) {
         const { x, y } = iso(gx, gy);
         const street = isStreet(gx, gy);
-        const fill = street ? '#1b1d22' : '#3a3027';
-        const stroke = street ? '#262930' : '#55473a';
+        // Streets look like asphalt (medium dark gray). Plot cells are dirt-brown
+        // so the plot pad renders a hair lighter and the lot still reads clearly.
+        const fill = street ? '#2a2d33' : '#4a3f32';
+        const stroke = street ? '#1e2026' : '#6b5744';
         tiles.push(
           <polygon
             key={`t${gx}_${gy}`}
             points={`${x},${y - TILE_H / 2} ${x + TILE_W / 2},${y} ${x},${y + TILE_H / 2} ${x - TILE_W / 2},${y}`}
             fill={fill}
             stroke={stroke}
-            strokeWidth={0.5}
+            strokeWidth={0.4}
           />,
         );
       }
@@ -169,8 +171,7 @@ export function Scene() {
     return tiles;
   }, []);
 
-  // Per-plot pad outline — draw the lot boundary so the player sees the land
-  // allocated to each building. The sprite overlays this pad.
+  // Per-plot pad: lot boundary + lighter sidewalk strip inside the plot edge.
   const plotPads = useMemo(() => {
     return PLOTS.map((p) => {
       const corners = [
@@ -180,15 +181,30 @@ export function Scene() {
         iso(p.gx - 0.5, p.gy + p.size - 0.5),
       ];
       const pts = corners.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+      // Slightly inset sidewalk ring (lighter)
+      const inset = 0.08;
+      const sw = [
+        iso(p.gx - 0.5 + inset, p.gy - 0.5 + inset),
+        iso(p.gx + p.size - 0.5 - inset, p.gy - 0.5 + inset),
+        iso(p.gx + p.size - 0.5 - inset, p.gy + p.size - 0.5 - inset),
+        iso(p.gx - 0.5 + inset, p.gy + p.size - 0.5 - inset),
+      ];
+      const swPts = sw.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
       return (
-        <polygon
-          key={`pad_${p.gx}_${p.gy}`}
-          points={pts}
-          fill="#3a3027"
-          stroke="#8b7355"
-          strokeWidth={0.6}
-          opacity={0.65}
-        />
+        <g key={`pad_${p.gx}_${p.gy}`}>
+          {/* Outer sidewalk ring (lighter gray) */}
+          <polygon
+            points={pts}
+            fill="#5a4a3a"
+            opacity={0.85}
+          />
+          {/* Inner lot (darker brown) */}
+          <polygon
+            points={swPts}
+            fill="#3a3027"
+            opacity={0.9}
+          />
+        </g>
       );
     });
   }, []);
