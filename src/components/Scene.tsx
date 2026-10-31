@@ -108,7 +108,9 @@ export function Scene() {
   }, [pendingRedevelopId, owned]);
 
   // Pan state: mutated on each pointer move, applied directly to the pan <g> transform.
-  const panRef = useRef({ x: 0, y: 0 });
+  // Initial pan centers Ellie's plot in the viewBox — the plot center is at
+  // iso coordinates (0, -32) with ELLIE_PLOT at (-2,-2,size 3), so we offset by +32 y.
+  const panRef = useRef({ x: 0, y: 32 });
   const panLayerRef = useRef<SVGGElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
