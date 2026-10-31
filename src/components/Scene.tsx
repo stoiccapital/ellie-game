@@ -157,10 +157,11 @@ export function Scene() {
         const street = isStreet(gx, gy);
         // Streets = medium asphalt gray that stands out against the dark sky.
         // Plot cells = dark brown dirt so lot pads layered above still read clearly.
-        // Streets: lighter asphalt gray with a hint of warm tint; curb-dark stroke.
-        // Plot cells: dark brown dirt so the plot pad (laid above) stays legible.
-        const fill = street ? '#565b65' : '#2d2419';
-        const stroke = street ? '#3f424a' : '#1b150e';
+        // Blank-canvas city: all non-plot cells are empty terrain, no asphalt
+        // yet. Plot cells (just Ellie's for now) keep their earthy brown so her
+        // plot pad reads clearly.
+        const fill = street ? '#1f2229' : '#2d2419';
+        const stroke = street ? '#171a20' : '#1b150e';
         tiles.push(
           <polygon
             key={`t${gx}_${gy}`}
