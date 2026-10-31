@@ -9,6 +9,8 @@ export function Portfolio() {
   const owned = useGame((s) => s.owned);
   const month = useGame((s) => s.month);
   const sellAsset = useGame((s) => s.sellAsset);
+  const buyAssetBulk = useGame((s) => s.buyAssetBulk);
+  const capital = useGame((s) => s.capital);
 
   const rows = useMemo(() => {
     return owned.map((asset) => {
@@ -24,9 +26,23 @@ export function Portfolio() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-line">
-        <div className="text-xs uppercase tracking-wider text-muted">Portfolio</div>
-        <div className="num text-sm text-ink mt-1">{owned.length} holdings</div>
+      <div className="px-4 py-3 border-b border-line flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted">Portfolio</div>
+          <div className="num text-sm text-ink mt-1">{owned.length} holdings</div>
+        </div>
+        {owned.length > 0 && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Sell every holding (${owned.length} record${owned.length === 1 ? '' : 's'})?`)) {
+                for (const a of owned) sellAsset(a.instanceId);
+              }
+            }}
+            className="h-7 px-2.5 rounded-md text-[11px] font-semibold border border-line text-muted hover:text-bad hover:border-bad/40 transition-colors"
+          >
+            Sell all
+          </button>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {rows.length === 0 && (
@@ -68,12 +84,24 @@ export function Portfolio() {
                 <div className={`num text-[11px] font-semibold ${net >= 0 ? 'text-accent' : 'text-warn'}`}>
                   {net >= 0 ? '+' : ''}{money(net)}
                 </div>
-                <button
-                  onClick={() => sellAsset(asset.instanceId)}
-                  className="mt-0.5 h-5 px-2 rounded text-[10px] text-muted hover:text-bad border border-line hover:border-bad/40 transition-colors"
-                >
-                  Sell
-                </button>
+                <div className="mt-0.5 flex items-center justify-end gap-1">
+                  {(def.category === 'business' || def.category === 'vehicle') && asset.plotIndex === undefined && (
+                    <button
+                      onClick={() => buyAssetBulk(def.id, 1)}
+                      disabled={capital < def.price}
+                      className="h-5 px-1.5 rounded text-[10px] font-semibold text-muted hover:text-accent border border-line hover:border-accent/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={`Buy one more ${def.name}`}
+                    >
+                      +1
+                    </button>
+                  )}
+                  <button
+                    onClick={() => sellAsset(asset.instanceId)}
+                    className="h-5 px-2 rounded text-[10px] text-muted hover:text-bad border border-line hover:border-bad/40 transition-colors"
+                  >
+                    Sell
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}
