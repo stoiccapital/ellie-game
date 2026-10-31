@@ -82,6 +82,22 @@ export const ELLIE_PLOT: Plot = { gx: -2, gy: -2, size: 3 };
 // landmark lots.
 const DOWNTOWN_RECT: Rect = { xMin: -11, xMax: 8, yMin: -11, yMax: 8 };
 
+// ─── Downtown fillers ───────────────────────────────────────────────────────
+// 2×2 commercial fillers in the horizontal avenues between the landmark/
+// skyscraper rows (y=-6..-5 and y=1..2). Keeps downtown from feeling empty.
+const DOWNTOWN_FILLERS: Plot[] = [
+  { gx: -10, gy: -6, size: 2 },
+  { gx:  -6, gy: -6, size: 2 },
+  { gx:  -2, gy: -6, size: 2 },
+  { gx:   2, gy: -6, size: 2 },
+  { gx:   6, gy: -6, size: 2 },
+  { gx: -10, gy:  1, size: 2 },
+  { gx:  -6, gy:  1, size: 2 },
+  { gx:  -2, gy:  1, size: 2 },
+  { gx:   2, gy:  1, size: 2 },
+  { gx:   6, gy:  1, size: 2 },
+];
+
 // ─── Mid-rise ring ───────────────────────────────────────────────────────────
 // Full tile of 2×2 lots over a 42×42 belt around downtown. Downtown is
 // subtracted so the frame fills in the corners instead of leaving dead corners.
@@ -93,7 +109,7 @@ const MID_RING: Plot[] = tile(-22, 19, -22, 19, 2, 2, [DOWNTOWN_RECT]);
 const MID_RECT: Rect = { xMin: -23, xMax: 20, yMin: -23, yMax: 20 };
 const SUBURB: Plot[] = tile(-30, 27, -30, 27, 1, 2, [DOWNTOWN_RECT, MID_RECT]);
 
-export const PLOTS: Plot[] = [ELLIE_PLOT, ...DOWNTOWN_PLOTS, ...MID_RING, ...SUBURB];
+export const PLOTS: Plot[] = [ELLIE_PLOT, ...DOWNTOWN_PLOTS, ...DOWNTOWN_FILLERS, ...MID_RING, ...SUBURB];
 
 // Sort buyable plots (everything except Ellie's) by distance from Ellie,
 // so first-time purchases happen next to her and ripple outward.

@@ -542,7 +542,7 @@ export function Scene() {
                 }
               >
                 {it.kind === 'ellie' ? (() => {
-                  const fpMul = Math.sqrt(it.footprint);
+                  const fpMul = 0.8 + 0.5 * it.footprint;
                   const spriteSize = it.size * fpMul;
                   return (
                     <>
@@ -564,7 +564,7 @@ export function Scene() {
                     </>
                   );
                 })() : it.kind === 'owned' ? (() => {
-                  const fpMul = Math.sqrt(it.footprint);
+                  const fpMul = 0.8 + 0.5 * it.footprint;
                   return (
                     <>
                       <ellipse cx={0} cy={6} rx={22 * fpMul} ry={6 * fpMul} fill="#000" opacity={0.35} />
@@ -578,7 +578,7 @@ export function Scene() {
                     </>
                   );
                 })() : it.kind === 'neighbor' ? (() => {
-                  const fpMul = Math.sqrt(it.footprint);
+                  const fpMul = 0.8 + 0.5 * it.footprint;
                   return (
                     <>
                       <ellipse cx={0} cy={6} rx={22 * fpMul} ry={6 * fpMul} fill="#000" opacity={0.3} />
@@ -587,7 +587,7 @@ export function Scene() {
                   );
                 })() : it.kind === 'empty' ? (() => {
                   // Buildable empty lot — show a dashed outline and a "+" badge.
-                  const fpMul = Math.sqrt(it.size);
+                  const fpMul = 0.8 + 0.5 * it.size;
                   const r = 14 * fpMul;
                   return (
                     <>
