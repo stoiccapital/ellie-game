@@ -379,7 +379,7 @@ export function Scene() {
 
       <svg
         ref={svgRef}
-        viewBox="-900 -520 1800 1040"
+        viewBox="-1400 -750 2800 1500"
         className="absolute inset-0 w-full h-full"
         style={{ cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none' }}
         onPointerDown={onPointerDown}
