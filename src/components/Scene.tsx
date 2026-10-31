@@ -36,6 +36,7 @@ type Item =
       category: AssetCategory;
       color: string;
       size: number;
+      footprint: number;
       sprite?: string;
       floors?: number;
     }
@@ -50,6 +51,7 @@ type Item =
       label: string;
       floors?: number;
       sprite?: string;
+      footprint: number;
     }
   | {
       kind: 'neighbor';
@@ -60,6 +62,7 @@ type Item =
       color: string;
       name: string;
       plotIndex: number;
+      footprint: number;
     }
   | {
       kind: 'ambient';
@@ -207,6 +210,7 @@ export function Scene() {
         size: tier.visual.size,
         sprite: tier.visual.sprite,
         floors: tier.visual.floors,
+        footprint: tier.visual.footprint ?? 1,
       });
     }
 
@@ -231,6 +235,7 @@ export function Scene() {
           label: money(ownedAsset.currentValue),
           floors: def.floors,
           sprite: def.sprite,
+          footprint: def.footprint ?? 1,
         });
         return;
       }
@@ -248,6 +253,7 @@ export function Scene() {
         color: def.color,
         name: neighbor.name,
         plotIndex: i,
+        footprint: def.footprint ?? 1,
       });
     });
 
@@ -461,41 +467,51 @@ export function Scene() {
                     : undefined
                 }
               >
-                {it.kind === 'ellie' ? (
-                  <>
-                    <ellipse
-                      cx={0}
-                      cy={6}
-                      rx={28 * (it.size / 1.25)}
-                      ry={7 * (it.size / 1.25)}
-                      fill="#000"
-                      opacity={0.35}
-                    />
-                    <AssetSprite
-                      category={it.category}
-                      color={it.color}
-                      size={it.size}
-                      sprite={it.sprite}
-                      floors={it.floors}
-                    />
-                  </>
-                ) : it.kind === 'owned' ? (
-                  <>
-                    <ellipse cx={0} cy={6} rx={22} ry={6} fill="#000" opacity={0.35} />
-                    <AssetSprite
-                      category={it.category}
-                      color={it.color}
-                      size={1.0}
-                      floors={it.floors}
-                      sprite={it.sprite}
-                    />
-                  </>
-                ) : it.kind === 'neighbor' ? (
-                  <>
-                    <ellipse cx={0} cy={6} rx={22} ry={6} fill="#000" opacity={0.3} />
-                    <AssetSprite category={it.category} color={it.color} size={0.95} />
-                  </>
-                ) : (
+                {it.kind === 'ellie' ? (() => {
+                  const fpMul = Math.sqrt(it.footprint);
+                  const spriteSize = it.size * fpMul;
+                  return (
+                    <>
+                      <ellipse
+                        cx={0}
+                        cy={6}
+                        rx={28 * (spriteSize / 1.25)}
+                        ry={7 * (spriteSize / 1.25)}
+                        fill="#000"
+                        opacity={0.35}
+                      />
+                      <AssetSprite
+                        category={it.category}
+                        color={it.color}
+                        size={spriteSize}
+                        sprite={it.sprite}
+                        floors={it.floors}
+                      />
+                    </>
+                  );
+                })() : it.kind === 'owned' ? (() => {
+                  const fpMul = Math.sqrt(it.footprint);
+                  return (
+                    <>
+                      <ellipse cx={0} cy={6} rx={22 * fpMul} ry={6 * fpMul} fill="#000" opacity={0.35} />
+                      <AssetSprite
+                        category={it.category}
+                        color={it.color}
+                        size={fpMul}
+                        floors={it.floors}
+                        sprite={it.sprite}
+                      />
+                    </>
+                  );
+                })() : it.kind === 'neighbor' ? (() => {
+                  const fpMul = Math.sqrt(it.footprint);
+                  return (
+                    <>
+                      <ellipse cx={0} cy={6} rx={22 * fpMul} ry={6 * fpMul} fill="#000" opacity={0.3} />
+                      <AssetSprite category={it.category} color={it.color} size={0.95 * fpMul} />
+                    </>
+                  );
+                })() : (
                   // ambient
                   <>
                     <ellipse

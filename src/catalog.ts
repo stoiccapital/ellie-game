@@ -13,6 +13,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'Small city rental. Steady entry-level cashflow.',
     color: '#9bb3d9',
+    footprint: 1,
   },
   {
     id: 'single_family',
@@ -25,6 +26,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: '3-bed suburban rental home.',
     color: '#c9a97a',
+    footprint: 2,
   },
   {
     id: 'duplex',
@@ -37,6 +39,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'Two units, one roof. Diversified tenants.',
     color: '#b48ac1',
+    footprint: 2,
   },
   {
     id: 'apartment_4u',
@@ -49,6 +52,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'Small multi-family building.',
     color: '#7fa8c7',
+    footprint: 2,
   },
   {
     id: 'commercial_lot',
@@ -61,6 +65,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'Retail-leased commercial property.',
     color: '#d9b672',
+    footprint: 2,
   },
   {
     id: 'warehouse',
@@ -73,6 +78,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'Long-lease logistics tenant.',
     color: '#9c9992',
+    footprint: 3,
   },
   {
     id: 'vacant_land',
@@ -85,6 +91,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'No cashflow. High appreciation.',
     color: '#6b9a6e',
+    footprint: 1,
   },
   {
     id: 'premium_land',
@@ -97,6 +104,7 @@ export const CATALOG: AssetDef[] = [
     depreciationYearly: 0,
     description: 'Development-ready. Prime location.',
     color: '#4e8a56',
+    footprint: 2,
   },
   {
     id: 'apt_10',
@@ -110,6 +118,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Compact 10-floor apartment block.',
     color: '#5a7a9c',
     floors: 10,
+    footprint: 2,
   },
   {
     id: 'apt_20',
@@ -123,6 +132,7 @@ export const CATALOG: AssetDef[] = [
     description: '20-floor apartment tower in a prime location.',
     color: '#6a5f8a',
     floors: 20,
+    footprint: 2,
   },
   {
     id: 'apt_30',
@@ -136,6 +146,7 @@ export const CATALOG: AssetDef[] = [
     description: '30-floor luxury residential tower.',
     color: '#4a6a7d',
     floors: 30,
+    footprint: 3,
   },
   {
     id: 'apt_40',
@@ -149,6 +160,7 @@ export const CATALOG: AssetDef[] = [
     description: '40-floor landmark skyscraper. Prestige asset.',
     color: '#3f5a66',
     floors: 40,
+    footprint: 4,
   },
   // Food & beverage
   {
@@ -163,6 +175,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Neighborhood coffee bar. Steady morning traffic.',
     color: '#c88a4a',
     sprite: 'shop',
+    footprint: 1,
   },
   {
     id: 'bar',
@@ -176,6 +189,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Evening drinks spot. Higher margin, late hours.',
     color: '#8d4a4a',
     sprite: 'shop',
+    footprint: 1,
   },
   {
     id: 'restaurant',
@@ -189,6 +203,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Casual dining. Lunch + dinner service.',
     color: '#b55a3c',
     sprite: 'shop',
+    footprint: 2,
   },
   // Retail
   {
@@ -203,6 +218,7 @@ export const CATALOG: AssetDef[] = [
     description: '24/7 corner store. Low margin, high turnover.',
     color: '#4e8a7e',
     sprite: 'shop',
+    footprint: 1,
   },
   {
     id: 'boutique',
@@ -216,6 +232,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Specialty retail. Lower volume, better margins.',
     color: '#8a5c87',
     sprite: 'shop',
+    footprint: 1,
   },
   {
     id: 'supermarket',
@@ -229,6 +246,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Full-size grocery store with anchor tenant.',
     color: '#5a8a52',
     sprite: 'supermarket',
+    footprint: 2,
   },
   // Office & hospitality
   {
@@ -243,6 +261,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Three floors of professional office space.',
     color: '#5a6f8a',
     sprite: 'office',
+    footprint: 2,
   },
   {
     id: 'office_10',
@@ -256,6 +275,7 @@ export const CATALOG: AssetDef[] = [
     description: '10-floor office tower. Anchor commercial tenants.',
     color: '#4a607a',
     floors: 10,
+    footprint: 2,
   },
   {
     id: 'hotel_boutique',
@@ -269,6 +289,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Mid-size hotel. Occupancy-driven revenue.',
     color: '#b89668',
     sprite: 'hotel',
+    footprint: 2,
   },
   // Education
   {
@@ -283,6 +304,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Early-years childcare. Steady but regulated.',
     color: '#d9ba55',
     sprite: 'school',
+    footprint: 1,
   },
   {
     id: 'school',
@@ -296,6 +318,7 @@ export const CATALOG: AssetDef[] = [
     description: 'K–6 school. Civic anchor; lower growth.',
     color: '#c9a84a',
     sprite: 'school',
+    footprint: 3,
   },
   // Healthcare
   {
@@ -310,6 +333,7 @@ export const CATALOG: AssetDef[] = [
     description: 'General-practice clinic with a few doctors.',
     color: '#8ab5c5',
     sprite: 'clinic',
+    footprint: 1,
   },
   {
     id: 'hospital',
@@ -323,6 +347,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Full-service hospital. Large campus asset.',
     color: '#a3c0ce',
     sprite: 'hospital',
+    footprint: 3,
   },
   // Fitness & entertainment
   {
@@ -337,6 +362,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Membership gym. Low variable cost.',
     color: '#b84a5a',
     sprite: 'gym',
+    footprint: 1,
   },
   {
     id: 'cinema',
@@ -350,6 +376,7 @@ export const CATALOG: AssetDef[] = [
     description: 'Multi-screen movie theater. Weekend-driven.',
     color: '#6a4a8a',
     sprite: 'cinema',
+    footprint: 2,
   },
   {
     id: 'economy_car',
@@ -724,6 +751,7 @@ export interface HomeTier {
     color: string;
     size: number;
     floors?: number;
+    footprint: number; // 1-4, scales how much ground the sprite covers on the map
   };
 }
 export const HOME_TIERS: HomeTier[] = [
@@ -734,7 +762,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 350,
     appreciationYearly: 0.025,
     description: 'Small one-room condo. Minimal upkeep.',
-    visual: { category: 'real_estate', color: '#8b8f98', size: 0.9 },
+    visual: { category: 'real_estate', color: '#8b8f98', size: 0.9, footprint: 1 },
   },
   {
     id: 'starter',
@@ -743,7 +771,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 800,
     appreciationYearly: 0.03,
     description: 'Modest suburban house. Classic first home.',
-    visual: { category: 'real_estate', color: '#e2b579', size: 1.25 },
+    visual: { category: 'real_estate', color: '#e2b579', size: 1.25, footprint: 1 },
   },
   {
     id: 'townhouse',
@@ -752,7 +780,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 1_400,
     appreciationYearly: 0.03,
     description: 'Three-floor row house in a nicer neighborhood.',
-    visual: { category: 'real_estate', color: '#d9a860', size: 1.5 },
+    visual: { category: 'real_estate', color: '#d9a860', size: 1.5, footprint: 1 },
   },
   {
     id: 'villa',
@@ -761,7 +789,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 3_500,
     appreciationYearly: 0.035,
     description: 'Private garden, pool, prestige address.',
-    visual: { category: 'commercial', sprite: 'villa', color: '#f0e6cf', size: 1.15 },
+    visual: { category: 'commercial', sprite: 'villa', color: '#f0e6cf', size: 1.15, footprint: 2 },
   },
   {
     id: 'penthouse',
@@ -770,7 +798,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 5_200,
     appreciationYearly: 0.035,
     description: 'Top-floor sky residence. Floor-to-ceiling glass, rooftop deck.',
-    visual: { category: 'commercial', sprite: 'penthouse', color: '#9fb6c9', size: 1.0 },
+    visual: { category: 'commercial', sprite: 'penthouse', color: '#9fb6c9', size: 1.0, footprint: 1 },
   },
   {
     id: 'mansion',
@@ -779,7 +807,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 9_500,
     appreciationYearly: 0.04,
     description: 'Multi-wing estate with staff quarters.',
-    visual: { category: 'commercial', sprite: 'mansion', color: '#efe3c2', size: 1.1 },
+    visual: { category: 'commercial', sprite: 'mansion', color: '#efe3c2', size: 1.1, footprint: 3 },
   },
   {
     id: 'estate',
@@ -788,7 +816,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 28_000,
     appreciationYearly: 0.04,
     description: 'Trophy property. Private cinema, vineyard, helipad.',
-    visual: { category: 'commercial', sprite: 'estate', color: '#f5ead1', size: 1.0 },
+    visual: { category: 'commercial', sprite: 'estate', color: '#f5ead1', size: 1.0, footprint: 4 },
   },
 ];
 export const STARTING_HOME_TIER_ID = 'starter';

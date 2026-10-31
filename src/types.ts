@@ -22,6 +22,9 @@ export interface AssetDef {
   // Max number of units the player can own. Undefined = no cap.
   // Reflects operational reality: a solo freelance studio can't be owned 10× by one person.
   maxOwned?: number;
+  // Approximate footprint in map cells (1 = small city lot, 4 = landmark city block).
+  // Drives on-map sprite scale so skyscrapers physically dwarf a studio condo.
+  footprint?: number;
 }
 
 export interface OwnedAsset {
