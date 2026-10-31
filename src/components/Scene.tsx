@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '../store';
-import { BUILDABLE_IDS, CATALOG, NEIGHBORS } from '../catalog';
+import { BUILDABLE_IDS, CATALOG, HOME_TIERS, NEIGHBORS } from '../catalog';
 import { AssetSprite } from './AssetSprite';
 import { money, moneyFull } from '../lib/format';
 import {
@@ -32,6 +32,12 @@ type Item =
       key: string;
       gx: number;
       gy: number;
+      tierId: string;
+      category: AssetCategory;
+      color: string;
+      size: number;
+      sprite?: string;
+      floors?: number;
     }
   | {
       kind: 'owned';
@@ -169,14 +175,39 @@ export function Scene() {
   }, [pendingBuyPlot]);
 
   const hasHome = useGame((s) => s.hasHome);
+  const homeTierId = useGame((s) => s.homeTierId);
   const setHomeModalOpen = useGame((s) => s.setHomeModalOpen);
+
+  // Trigger a one-shot upgrade pulse whenever the home tier id changes.
+  const [upgradePulse, setUpgradePulse] = useState(0);
+  const prevTierRef = useRef(homeTierId);
+  useEffect(() => {
+    if (prevTierRef.current !== homeTierId && hasHome) {
+      setUpgradePulse((n) => n + 1);
+    }
+    prevTierRef.current = homeTierId;
+  }, [homeTierId, hasHome]);
 
   const items: Item[] = useMemo(() => {
     const list: Item[] = [];
 
     // Ellie — only shown while she still owns her home.
     if (hasHome) {
-      list.push({ kind: 'ellie', key: 'ellie', gx: ELLIE_GX, gy: ELLIE_GY });
+      const tier = HOME_TIERS.find((t) => t.id === homeTierId) ?? HOME_TIERS[1];
+      list.push({
+        kind: 'ellie',
+        // Keying by tier id makes AnimatePresence treat an upgrade as a swap
+        // (exit the old sprite, enter the new one), which gives us a free pop animation.
+        key: `ellie_${tier.id}`,
+        gx: ELLIE_GX,
+        gy: ELLIE_GY,
+        tierId: tier.id,
+        category: tier.visual.category as AssetCategory,
+        color: tier.visual.color,
+        size: tier.visual.size,
+        sprite: tier.visual.sprite,
+        floors: tier.visual.floors,
+      });
     }
 
     // Each plot shows either an owned house (if player bought it) or the neighbor still living there.
@@ -239,7 +270,7 @@ export function Scene() {
 
     list.sort((a, b) => a.gx + a.gy - (b.gx + b.gy));
     return list;
-  }, [owned, clearedPlots, hasHome]);
+  }, [owned, clearedPlots, hasHome, homeTierId]);
 
   const dayPhase = (Math.sin((month / 12) * Math.PI * 2) + 1) / 2;
   const skyTop = `hsl(230, 30%, ${7 + dayPhase * 6}%)`;
@@ -367,6 +398,40 @@ export function Scene() {
           />
         )}
 
+        {/* Upgrade burst: expanding ring + flash each time the home tier changes. */}
+        {upgradePulse > 0 && (
+          <motion.g
+            key={`pulse_${upgradePulse}`}
+            style={{
+              transformOrigin: `${iso(ELLIE_GX, ELLIE_GY).x}px ${iso(ELLIE_GX, ELLIE_GY).y}px`,
+              transformBox: 'fill-box',
+            } as React.CSSProperties}
+            initial={{ opacity: 0.9, scale: 0.2 }}
+            animate={{ opacity: 0, scale: 2.4 }}
+            transition={{ duration: 1.1, ease: 'easeOut' }}
+            pointerEvents="none"
+          >
+            <ellipse
+              cx={iso(ELLIE_GX, ELLIE_GY).x}
+              cy={iso(ELLIE_GX, ELLIE_GY).y}
+              rx={60}
+              ry={30}
+              fill="none"
+              stroke="#f2d6a0"
+              strokeWidth={1.5}
+              opacity={0.8}
+            />
+            <ellipse
+              cx={iso(ELLIE_GX, ELLIE_GY).x}
+              cy={iso(ELLIE_GX, ELLIE_GY).y}
+              rx={40}
+              ry={20}
+              fill="#f2d6a0"
+              opacity={0.25}
+            />
+          </motion.g>
+        )}
+
         {/* Traffic simulation — vehicles obey lights, drawn behind houses so buildings occlude them */}
         <TrafficSim
           specs={vehicles}
@@ -380,17 +445,25 @@ export function Scene() {
             return (
               <motion.g
                 key={it.key}
-                initial={it.kind === 'owned' ? { opacity: 0, scale: 0.4, x, y: y - 16 } : { x, y }}
+                initial={
+                  it.kind === 'owned' || it.kind === 'ellie'
+                    ? { opacity: 0, scale: 0.3, x, y: y - 24 }
+                    : { x, y }
+                }
                 animate={{
                   opacity: it.kind === 'ambient' ? 0.72 : 1,
                   scale: 1,
                   x,
                   y,
                 }}
-                exit={{ opacity: 0, scale: 0.4 }}
+                exit={
+                  it.kind === 'ellie'
+                    ? { opacity: 0, scale: 0.3, y: y + 10 }
+                    : { opacity: 0, scale: 0.4 }
+                }
                 transition={
-                  it.kind === 'owned'
-                    ? { type: 'spring', stiffness: 220, damping: 20 }
+                  it.kind === 'owned' || it.kind === 'ellie'
+                    ? { type: 'spring', stiffness: 220, damping: 18 }
                     : { duration: 0 }
                 }
                 whileHover={
@@ -415,8 +488,21 @@ export function Scene() {
               >
                 {it.kind === 'ellie' ? (
                   <>
-                    <ellipse cx={0} cy={6} rx={28} ry={7} fill="#000" opacity={0.35} />
-                    <AssetSprite category="real_estate" color="#e2b579" size={1.25} />
+                    <ellipse
+                      cx={0}
+                      cy={6}
+                      rx={28 * (it.size / 1.25)}
+                      ry={7 * (it.size / 1.25)}
+                      fill="#000"
+                      opacity={0.35}
+                    />
+                    <AssetSprite
+                      category={it.category}
+                      color={it.color}
+                      size={it.size}
+                      sprite={it.sprite}
+                      floors={it.floors}
+                    />
                   </>
                 ) : it.kind === 'owned' ? (
                   <>

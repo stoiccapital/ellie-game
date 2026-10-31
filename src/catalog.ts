@@ -717,6 +717,14 @@ export interface HomeTier {
   monthlyExpense: number;
   appreciationYearly: number;
   description: string;
+  // Visual: which AssetSprite variant to render on the map, and how to tint/scale it.
+  visual: {
+    category: 'real_estate' | 'commercial' | 'tower';
+    sprite?: string; // overrides category default; e.g. 'hotel', 'office'
+    color: string;
+    size: number;
+    floors?: number;
+  };
 }
 export const HOME_TIERS: HomeTier[] = [
   {
@@ -726,6 +734,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 350,
     appreciationYearly: 0.025,
     description: 'Small one-room condo. Minimal upkeep.',
+    visual: { category: 'real_estate', color: '#8b8f98', size: 0.9 },
   },
   {
     id: 'starter',
@@ -734,6 +743,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 800,
     appreciationYearly: 0.03,
     description: 'Modest suburban house. Classic first home.',
+    visual: { category: 'real_estate', color: '#e2b579', size: 1.25 },
   },
   {
     id: 'townhouse',
@@ -742,6 +752,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 1_400,
     appreciationYearly: 0.03,
     description: 'Three-floor row house in a nicer neighborhood.',
+    visual: { category: 'real_estate', color: '#d9a860', size: 1.5 },
   },
   {
     id: 'villa',
@@ -750,6 +761,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 3_500,
     appreciationYearly: 0.035,
     description: 'Private garden, pool, prestige address.',
+    visual: { category: 'commercial', sprite: 'hotel', color: '#d9b672', size: 1.2 },
   },
   {
     id: 'mansion',
@@ -758,6 +770,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 9_500,
     appreciationYearly: 0.04,
     description: 'Multi-wing estate with staff quarters.',
+    visual: { category: 'commercial', sprite: 'hotel', color: '#f2c15a', size: 1.55 },
   },
   {
     id: 'estate',
@@ -766,6 +779,7 @@ export const HOME_TIERS: HomeTier[] = [
     monthlyExpense: 28_000,
     appreciationYearly: 0.04,
     description: 'Trophy property. Private cinema, vineyard, helipad.',
+    visual: { category: 'tower', color: '#f2d6a0', size: 1.3, floors: 6 },
   },
 ];
 export const STARTING_HOME_TIER_ID = 'starter';
