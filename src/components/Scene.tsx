@@ -19,7 +19,8 @@ import {
   Y_MIN,
   Y_MAX,
   iso,
-  isStreet,
+  isPlotCell,
+  isStreetCell,
   ambientAt,
 } from '../lib/city';
 import type { AssetCategory } from '../types';
@@ -154,14 +155,14 @@ export function Scene() {
     for (let gx = X_MIN; gx <= X_MAX; gx++) {
       for (let gy = Y_MIN; gy <= Y_MAX; gy++) {
         const { x, y } = iso(gx, gy);
-        const street = isStreet(gx, gy);
-        // Streets = medium asphalt gray that stands out against the dark sky.
-        // Plot cells = dark brown dirt so lot pads layered above still read clearly.
-        // Blank-canvas city: all non-plot cells are empty terrain, no asphalt
-        // yet. Plot cells (just Ellie's for now) keep their earthy brown so her
-        // plot pad reads clearly.
-        const fill = street ? '#1f2229' : '#2d2419';
-        const stroke = street ? '#171a20' : '#1b150e';
+        // Three cell types:
+        //  - plot cells: brown dirt (plot pad renders above)
+        //  - street cells: medium-gray asphalt
+        //  - everything else: dark empty terrain (undeveloped land)
+        const plot = isPlotCell(gx, gy);
+        const street = isStreetCell(gx, gy);
+        const fill = plot ? '#2d2419' : street ? '#565b65' : '#1f2229';
+        const stroke = plot ? '#1b150e' : street ? '#3f424a' : '#171a20';
         tiles.push(
           <polygon
             key={`t${gx}_${gy}`}
