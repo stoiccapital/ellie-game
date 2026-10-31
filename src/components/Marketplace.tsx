@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CATALOG } from '../catalog';
+import { CATALOG, NEIGHBORS } from '../catalog';
+import { BUYABLE_PLOTS } from '../lib/city';
 import { useGame } from '../store';
 import { money, moneyFull, pct } from '../lib/format';
 import { AssetSprite } from './AssetSprite';
 import { cn } from '../lib/cn';
 import type { AssetCategory } from '../types';
 
-type TabKey = 'vehicle' | 'business' | 'etf';
+type TabKey = 'property' | 'vehicle' | 'business' | 'etf';
 const TABS: Array<{ key: TabKey; label: string }> = [
+  { key: 'property', label: 'Properties' },
   { key: 'vehicle', label: 'Vehicles' },
   { key: 'business', label: 'Businesses' },
   { key: 'etf', label: 'ETFs' },
@@ -19,7 +21,10 @@ export function Marketplace() {
   const owned = useGame((s) => s.owned);
   const buyAsset = useGame((s) => s.buyAsset);
   const buyAssetBulk = useGame((s) => s.buyAssetBulk);
-  const [tab, setTab] = useState<TabKey>('vehicle');
+  const buyNeighbor = useGame((s) => s.buyNeighbor);
+  const clearedPlots = useGame((s) => s.clearedPlots);
+  const [tab, setTab] = useState<TabKey>('property');
+  const [propSort, setPropSort] = useState<'price' | 'yield' | 'size'>('price');
   const [etfAmount, setEtfAmount] = useState<Record<string, string>>({});
   const [bizQty, setBizQty] = useState<Record<string, string>>({});
 
@@ -39,7 +44,38 @@ export function Marketplace() {
   const parkingLeft = parkingCapacity - vehicleCount;
   const parkingFull = parkingLeft <= 0;
 
-  const items = CATALOG.filter((c) => c.category === (tab as AssetCategory));
+  const items = tab === 'property' ? [] : CATALOG.filter((c) => c.category === (tab as AssetCategory));
+
+  // Available neighbor properties the player can buy from the list.
+  // A plot is listable while the neighbor still lives there (not cleared, not owned).
+  const properties = useMemo(() => {
+    if (tab !== 'property') return [];
+    const clearedSet = new Set(clearedPlots);
+    const ownedPlots = new Set(owned.map((a) => a.plotIndex).filter((i) => i !== undefined) as number[]);
+    const rows: Array<{
+      plotIndex: number;
+      neighborName: string;
+      def: typeof CATALOG[number];
+      size: number;
+      net: number;
+      annualYield: number;
+    }> = [];
+    BUYABLE_PLOTS.forEach((plot, i) => {
+      if (clearedSet.has(i)) return;
+      if (ownedPlots.has(i)) return;
+      const neighbor = NEIGHBORS[i];
+      if (!neighbor) return;
+      const def = CATALOG.find((d) => d.id === neighbor.defId);
+      if (!def) return;
+      const net = def.monthlyIncome - def.monthlyExpense;
+      const annualYield = def.price > 0 ? (net * 12) / def.price : 0;
+      rows.push({ plotIndex: i, neighborName: neighbor.name, def, size: plot.size, net, annualYield });
+    });
+    if (propSort === 'price') rows.sort((a, b) => a.def.price - b.def.price);
+    else if (propSort === 'yield') rows.sort((a, b) => b.annualYield - a.annualYield);
+    else rows.sort((a, b) => a.size - b.size || a.def.price - b.def.price);
+    return rows;
+  }, [tab, propSort, clearedPlots, owned]);
 
   return (
     <div className="flex flex-col h-full">
@@ -83,9 +119,86 @@ export function Marketplace() {
             Buy any dollar amount. Price drifts with trend + volatility; monthly dividend paid in cash.
           </div>
         )}
+        {tab === 'property' && (
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="text-[11px] text-muted">
+              <span className="num text-ink">{properties.length}</span> plots for sale across the city.
+            </div>
+            <div className="flex items-center gap-1 text-[10px]">
+              <span className="text-muted uppercase tracking-wider">Sort</span>
+              {(['price', 'yield', 'size'] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setPropSort(k)}
+                  className={cn(
+                    'h-5 px-1.5 rounded text-[10px] font-semibold transition-colors',
+                    propSort === k ? 'text-ink border border-ink/40' : 'text-muted hover:text-ink',
+                  )}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {tab === 'property' && properties.map(({ plotIndex, neighborName, def, size, net, annualYield }) => {
+          const affordable = capital >= def.price;
+          return (
+            <motion.div
+              key={plotIndex}
+              layout
+              className={cn(
+                'rounded-lg border bg-panel2 p-2.5 flex gap-2.5 items-center transition-colors',
+                affordable ? 'border-line hover:border-emerald-400/30' : 'border-line opacity-60',
+              )}
+            >
+              <div className="w-11 h-11 flex-shrink-0 rounded-md bg-black/30 border border-line flex items-center justify-center">
+                <svg viewBox="-40 -60 80 80" className="w-full h-full">
+                  <AssetSprite
+                    category={def.category}
+                    color={def.color}
+                    size={def.category === 'tower' ? 0.5 : 0.75}
+                    floors={def.floors}
+                    sprite={def.sprite}
+                  />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold text-ink truncate">{def.name}</div>
+                <div className="text-[10px] text-muted truncate">
+                  Seller <span className="text-ink">{neighborName}</span>
+                  {' · '}
+                  Lot <span className="num text-ink">{size}×{size}</span>
+                </div>
+                <div className="text-[10px] text-muted mt-0.5">
+                  Yield <span className="num text-ink">{pct(annualYield)}</span>
+                  {' · '}
+                  <span className={net >= 0 ? 'num text-accent' : 'num text-bad'}>
+                    {net >= 0 ? '+' : ''}{money(net)} /mo
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="num text-xs font-semibold text-ink">{moneyFull(def.price)}</div>
+                <button
+                  onClick={() => buyNeighbor(plotIndex)}
+                  disabled={!affordable}
+                  className={cn(
+                    'mt-1 h-6 px-2 rounded text-[10px] font-semibold transition-colors',
+                    affordable
+                      ? 'bg-accent text-black hover:bg-emerald-300'
+                      : 'bg-line text-muted cursor-not-allowed',
+                  )}
+                >
+                  {affordable ? 'Buy' : 'Short'}
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
         {items.map((def) => {
           const net = def.monthlyIncome - def.monthlyExpense;
           const yieldPerDollar = def.price > 0 ? (net / def.price) : 0;
