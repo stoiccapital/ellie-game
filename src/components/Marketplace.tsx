@@ -157,37 +157,55 @@ export function Marketplace() {
                   </div>
                 )}
                 <div className="mt-2 flex items-center gap-2">
-                  {tab === 'etf' ? (
-                    <>
-                      <input
-                        type="number"
-                        min={0}
-                        step={100}
-                        value={etfAmount[def.id] ?? ''}
-                        onChange={(e) => setEtfAmount({ ...etfAmount, [def.id]: e.target.value })}
-                        placeholder="$ amount"
-                        className="flex-1 h-7 px-2 rounded-md bg-panel border border-line text-xs num text-ink focus:outline-none focus:border-ink/40"
-                      />
-                      <button
-                        onClick={() => {
-                          const amt = Math.max(0, Math.floor(Number(etfAmount[def.id] || 0)));
-                          if (amt <= 0) return;
-                          if (buyAsset(def.id, amt)) {
-                            setEtfAmount({ ...etfAmount, [def.id]: '' });
-                          }
-                        }}
-                        disabled={!buyable}
-                        className={cn(
-                          'h-7 px-3 rounded-md text-[11px] font-semibold transition-colors',
-                          buyable
-                            ? 'bg-accent text-black hover:bg-emerald-300'
-                            : 'bg-line text-muted cursor-not-allowed',
-                        )}
-                      >
-                        Buy
-                      </button>
-                    </>
-                  ) : tab === 'business' ? (
+                  {tab === 'etf' ? (() => {
+                    const maxSpend = Math.max(0, Math.floor(capital));
+                    const requested = Math.max(0, Math.floor(Number(etfAmount[def.id] || 0)));
+                    const spend = Math.min(requested, maxSpend);
+                    const canBuy = spend > 0 && capital >= spend;
+                    return (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          step={100}
+                          value={etfAmount[def.id] ?? ''}
+                          onChange={(e) => setEtfAmount({ ...etfAmount, [def.id]: e.target.value })}
+                          placeholder="$ amount"
+                          className="flex-1 h-7 px-2 rounded-md bg-panel border border-line text-xs num text-ink focus:outline-none focus:border-ink/40"
+                        />
+                        <button
+                          onClick={() => setEtfAmount({ ...etfAmount, [def.id]: String(maxSpend) })}
+                          disabled={maxSpend <= 0}
+                          className={cn(
+                            'h-7 px-2 rounded-md text-[11px] font-semibold border transition-colors',
+                            maxSpend > 0
+                              ? 'border-line text-muted hover:text-ink hover:border-ink/40'
+                              : 'border-line text-muted/50 cursor-not-allowed',
+                          )}
+                          title={`Max ${moneyFull(maxSpend)}`}
+                        >
+                          Max
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (spend <= 0) return;
+                            if (buyAsset(def.id, spend)) {
+                              setEtfAmount({ ...etfAmount, [def.id]: '' });
+                            }
+                          }}
+                          disabled={!canBuy}
+                          className={cn(
+                            'h-7 px-3 rounded-md text-[11px] font-semibold transition-colors',
+                            canBuy
+                              ? 'bg-accent text-black hover:bg-emerald-300'
+                              : 'bg-line text-muted cursor-not-allowed',
+                          )}
+                        >
+                          {spend > 0 ? `Buy ${money(spend)}` : 'Buy'}
+                        </button>
+                      </>
+                    );
+                  })() : tab === 'business' ? (
                     (() => {
                       const ownedOfType = owned.reduce((n, a) => a.defId === def.id ? n + (a.units ?? 1) : n, 0);
                       const remainingCap = def.maxOwned !== undefined
