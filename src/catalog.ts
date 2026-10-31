@@ -1,5 +1,5 @@
 import type { AssetDef } from './types';
-import { MAX_PLOTS } from './lib/city';
+import { BUYABLE_PLOTS } from './lib/city';
 
 export const CATALOG: AssetDef[] = [
   {
@@ -584,21 +584,27 @@ const NEIGHBOR_NAMES = [
   'Sean', 'Edda', 'Nils', 'Flora', 'Jon', 'Mira', 'Ash', 'Alma',
   'Gus', 'Freya', 'Milo', 'Imogen', 'Rune', 'Signe', 'Ulf',
 ];
-const HOUSE_DEF_ROTATION = [
-  'studio_condo', 'single_family', 'duplex', 'single_family',
-  'studio_condo', 'apartment_4u', 'commercial_lot', 'duplex',
-  'warehouse', 'single_family', 'premium_land', 'studio_condo',
-  'vacant_land', 'apartment_4u', 'duplex', 'single_family',
-];
+// Per-plot-size default seed buildings. Each lot comes pre-built with one of these
+// (varies by index for visual variety). The redevelop modal still filters by
+// footprint ≤ plot size.
+const SEEDS_BY_SIZE: Record<1 | 2 | 3 | 4, string[]> = {
+  1: ['studio_condo', 'cafe', 'bar', 'convenience', 'boutique', 'vacant_land', 'clinic', 'gym', 'daycare'],
+  2: ['single_family', 'duplex', 'apartment_4u', 'commercial_lot', 'premium_land', 'cinema', 'small_office', 'hotel_boutique', 'restaurant', 'supermarket'],
+  3: ['apt_30', 'warehouse', 'hospital', 'school'],
+  4: ['apt_40'],
+};
 
-function makeNeighbors(count: number): Neighbor[] {
-  return Array.from({ length: count }, (_, i) => ({
-    name: NEIGHBOR_NAMES[i % NEIGHBOR_NAMES.length],
-    defId: HOUSE_DEF_ROTATION[i % HOUSE_DEF_ROTATION.length],
-  }));
+function makeNeighbors(): Neighbor[] {
+  return BUYABLE_PLOTS.map((plot, i) => {
+    const pool = SEEDS_BY_SIZE[plot.size];
+    return {
+      name: NEIGHBOR_NAMES[i % NEIGHBOR_NAMES.length],
+      defId: pool[i % pool.length],
+    };
+  });
 }
 
-export const NEIGHBORS: Neighbor[] = makeNeighbors(MAX_PLOTS);
+export const NEIGHBORS: Neighbor[] = makeNeighbors();
 
 // Buildings the player can construct via "Redevelop" on an owned plot.
 // Grouped and ordered roughly by price band so the modal reads cheapest → priciest.

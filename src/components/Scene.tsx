@@ -10,9 +10,9 @@ import {
   STREETS_Y,
   TILE_W,
   TILE_H,
-  ELLIE_GX,
-  ELLIE_GY,
-  EMPTY_PLOT_CELLS,
+  ELLIE_PLOT,
+  BUYABLE_PLOTS,
+  PLOTS,
   MAX_PLOTS,
   X_MIN,
   X_MAX,
@@ -23,8 +23,6 @@ import {
   ambientAt,
 } from '../lib/city';
 import type { AssetCategory } from '../types';
-
-const plotKeySet = new Set(EMPTY_PLOT_CELLS.map(([gx, gy]) => `${gx},${gy}`));
 
 type Item =
   | {
@@ -93,7 +91,10 @@ export function Scene() {
     if (!asset) return null;
     const def = CATALOG.find((d) => d.id === asset.defId);
     if (!def) return null;
-    return { asset, def };
+    // Look up the lot size for this asset's plot so the modal can filter
+    // buildable options to things that physically fit.
+    const plot = asset.plotIndex !== undefined ? BUYABLE_PLOTS[asset.plotIndex] : undefined;
+    return { asset, def, plotSize: plot?.size ?? 1 };
   }, [pendingRedevelopId, owned]);
 
   // Pan state: mutated on each pointer move, applied directly to the pan <g> transform.
@@ -142,9 +143,8 @@ export function Scene() {
       for (let gy = Y_MIN; gy <= Y_MAX; gy++) {
         const { x, y } = iso(gx, gy);
         const street = isStreet(gx, gy);
-        const isPlot = plotKeySet.has(`${gx},${gy}`);
-        const fill = street ? '#1b1d22' : isPlot ? '#3a3027' : '#2a2520';
-        const stroke = street ? '#262930' : isPlot ? '#55473a' : '#312b26';
+        const fill = street ? '#1b1d22' : '#3a3027';
+        const stroke = street ? '#262930' : '#55473a';
         tiles.push(
           <polygon
             key={`t${gx}_${gy}`}
@@ -157,6 +157,30 @@ export function Scene() {
       }
     }
     return tiles;
+  }, []);
+
+  // Per-plot pad outline — draw the lot boundary so the player sees the land
+  // allocated to each building. The sprite overlays this pad.
+  const plotPads = useMemo(() => {
+    return PLOTS.map((p) => {
+      const corners = [
+        iso(p.gx - 0.5, p.gy - 0.5),
+        iso(p.gx + p.size - 0.5, p.gy - 0.5),
+        iso(p.gx + p.size - 0.5, p.gy + p.size - 0.5),
+        iso(p.gx - 0.5, p.gy + p.size - 0.5),
+      ];
+      const pts = corners.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+      return (
+        <polygon
+          key={`pad_${p.gx}_${p.gy}`}
+          points={pts}
+          fill="#3a3027"
+          stroke="#8b7355"
+          strokeWidth={0.6}
+          opacity={0.65}
+        />
+      );
+    });
   }, []);
 
   const pendingSell = useMemo(() => {
@@ -194,16 +218,23 @@ export function Scene() {
   const items: Item[] = useMemo(() => {
     const list: Item[] = [];
 
-    // Ellie — only shown while she still owns her home.
+    // Helper: center cell for an N×N plot anchored at (gx, gy).
+    const plotCenter = (gx: number, gy: number, size: number) => ({
+      cx: gx + (size - 1) / 2,
+      cy: gy + (size - 1) / 2,
+    });
+
+    // Ellie — only shown while she still owns her home. Centered on her plot.
     if (hasHome) {
       const tier = HOME_TIERS.find((t) => t.id === homeTierId) ?? HOME_TIERS[1];
+      const { cx, cy } = plotCenter(ELLIE_PLOT.gx, ELLIE_PLOT.gy, ELLIE_PLOT.size);
       list.push({
         kind: 'ellie',
         // Keying by tier id makes AnimatePresence treat an upgrade as a swap
         // (exit the old sprite, enter the new one), which gives us a free pop animation.
         key: `ellie_${tier.id}`,
-        gx: ELLIE_GX,
-        gy: ELLIE_GY,
+        gx: cx,
+        gy: cy,
         tierId: tier.id,
         category: tier.visual.category as AssetCategory,
         color: tier.visual.color,
@@ -219,7 +250,8 @@ export function Scene() {
     for (const a of owned) if (a.plotIndex !== undefined) ownedByPlot.set(a.plotIndex, a);
 
     const clearedSet = new Set(clearedPlots);
-    EMPTY_PLOT_CELLS.forEach(([gx, gy], i) => {
+    BUYABLE_PLOTS.forEach((plot, i) => {
+      const { cx, cy } = plotCenter(plot.gx, plot.gy, plot.size);
       const ownedAsset = ownedByPlot.get(i);
       if (ownedAsset) {
         const def = CATALOG.find((d) => d.id === ownedAsset.defId);
@@ -227,8 +259,8 @@ export function Scene() {
         list.push({
           kind: 'owned',
           key: ownedAsset.instanceId,
-          gx,
-          gy,
+          gx: cx,
+          gy: cy,
           category: def.category,
           color: def.color,
           name: def.name,
@@ -247,8 +279,8 @@ export function Scene() {
       list.push({
         kind: 'neighbor',
         key: `nb_${i}`,
-        gx,
-        gy,
+        gx: cx,
+        gy: cy,
         category: def.category,
         color: def.color,
         name: neighbor.name,
@@ -326,7 +358,7 @@ export function Scene() {
 
       <svg
         ref={svgRef}
-        viewBox="-440 -280 880 540"
+        viewBox="-900 -520 1800 1040"
         className="absolute inset-0 w-full h-full"
         style={{ cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none' }}
         onPointerDown={onPointerDown}
@@ -355,6 +387,9 @@ export function Scene() {
         <g>
           {groundTiles}
         </g>
+
+        {/* Per-plot pads — show the land allocated to each lot */}
+        <g>{plotPads}</g>
 
         {/* Sidewalk highlight on center block edges */}
         <g opacity={0.5}>
@@ -393,25 +428,25 @@ export function Scene() {
           })}
         </g>
 
-        {/* Warm glow under Ellie's house */}
-        {hasHome && (
-          <ellipse
-            cx={iso(ELLIE_GX, ELLIE_GY).x}
-            cy={iso(ELLIE_GX, ELLIE_GY).y}
-            rx={120}
-            ry={60}
-            fill="url(#centerGlow)"
-          />
-        )}
+        {/* Warm glow under Ellie's house (centered on her plot) */}
+        {hasHome && (() => {
+          const cx = ELLIE_PLOT.gx + (ELLIE_PLOT.size - 1) / 2;
+          const cy = ELLIE_PLOT.gy + (ELLIE_PLOT.size - 1) / 2;
+          const p = iso(cx, cy);
+          return (
+            <ellipse cx={p.x} cy={p.y} rx={180} ry={90} fill="url(#centerGlow)" />
+          );
+        })()}
 
         {/* Upgrade celebration — concentric gold rings + sparkle shower. */}
-        {upgradePulse > 0 && (
-          <UpgradeBurst
-            key={`pulse_${upgradePulse}`}
-            x={iso(ELLIE_GX, ELLIE_GY).x}
-            y={iso(ELLIE_GX, ELLIE_GY).y}
-          />
-        )}
+        {upgradePulse > 0 && (() => {
+          const cx = ELLIE_PLOT.gx + (ELLIE_PLOT.size - 1) / 2;
+          const cy = ELLIE_PLOT.gy + (ELLIE_PLOT.size - 1) / 2;
+          const p = iso(cx, cy);
+          return (
+            <UpgradeBurst key={`pulse_${upgradePulse}`} x={p.x} y={p.y} />
+          );
+        })()}
 
         {/* Traffic simulation — vehicles obey lights, drawn behind houses so buildings occlude them */}
         <TrafficSim
@@ -668,7 +703,10 @@ export function Scene() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {BUILDABLE_IDS.map((bid) => {
+                {BUILDABLE_IDS.filter((bid) => {
+                  const d = CATALOG.find((c) => c.id === bid);
+                  return d && (d.footprint ?? 1) <= pendingRedevelop.plotSize;
+                }).map((bid) => {
                   const def = CATALOG.find((d) => d.id === bid);
                   if (!def) return null;
                   const net = def.monthlyIncome - def.monthlyExpense;
